@@ -27,6 +27,7 @@ def parse_rows(raw: str) -> list[dict]:
     rows: list[dict] = []
     for item in csv.DictReader(io.StringIO(raw)):
         special = int(item['special'])
+        date_obj = datetime.strptime(item['date'], '%Y-%m-%d')
         rows.append(
             {
                 'date': item['date'],
@@ -35,6 +36,7 @@ def parse_rows(raw: str) -> list[dict]:
                 'specialDisplay': f'{special:05d}',
                 'tail': special % 100,
                 'tailDisplay': f'{special % 100:02d}',
+                'weekday': date_obj.weekday(),
             }
         )
     return sorted(rows, key=lambda row: row['date'])
@@ -67,14 +69,27 @@ def build_payload(rows: list[dict], source_mode: str, source_file: str) -> dict:
 
     stats = []
     total_history = len(rows)
+    
+    weekday_counts = {n: [0]*7 for n in range(100)}
+    appearance_indices = {n: [] for n in range(100)}
+    for i, row in enumerate(rows):
+        num = row['tail']
+        weekday_counts[num][row['weekday']] += 1
+        appearance_indices[num].append(i)
+        
     for number in range(100):
-        gap = None
-        last_date = None
-        for index in range(len(rows) - 1, -1, -1):
-            if rows[index]['tail'] == number:
-                gap = len(rows) - 1 - index
-                last_date = rows[index]['date']
-                break
+        indices = appearance_indices[number]
+        gap_history = []
+        if indices:
+            gap_history = [(indices[k] - indices[k-1]) for k in range(1, len(indices))]
+            current_gap = len(rows) - 1 - indices[-1]
+            gap_history.append(current_gap)
+            gap_history = gap_history[-10:]
+            gap = current_gap
+            last_date = rows[indices[-1]]['date']
+        else:
+            gap = None
+            last_date = None
 
         # Enhanced prediction algorithm with 5 factors:
         # 30% uniform prior (baseline)
@@ -100,6 +115,9 @@ def build_payload(rows: list[dict], source_mode: str, source_file: str) -> dict:
                 'count30': count_short[number],
                 'countAll': count_all[number],
                 'gap': gap,
+                'gapHistory': gap_history,
+                'weekdayCounts': weekday_counts[number],
+                'expectedGap': total_history / max(1, count_all[number]),
                 'lastSeen': last_date,
                 'lastSeenDisplay': format_display_date(last_date) if last_date else '-',
                 'recentRate': count_recent[number] / WINDOW_DAYS,
@@ -132,7 +150,51 @@ def build_payload(rows: list[dict], source_mode: str, source_file: str) -> dict:
     most_common_numbers = [item['number'] for item in stats if item['count100'] == most_common_count]
     missing_numbers = [item['number'] for item in stats if item['count100'] == 0]
 
+    backtest_days = min(100, len(rows) - 100)
+    bt_hits = 0
+    bt_results = []
+    
+    if backtest_days > 0:
+        for i in range(len(rows) - backtest_days, len(rows)):
+            t_tail = rows[i]['tail']
+            h_rows = rows[:i]
+            if not h_rows: continue
+            
+            c_s = Counter([r['tail'] for r in h_rows[-SHORT_WINDOW_DAYS:]])
+            c_r = Counter([r['tail'] for r in h_rows[-WINDOW_DAYS:]])
+            c_a = Counter([r['tail'] for r in h_rows])
+            h_len = len(h_rows)
+            
+            p_list = []
+            for num in range(100):
+                g = None
+                for j in range(h_len - 1, -1, -1):
+                    if h_rows[j]['tail'] == num:
+                        g = h_len - 1 - j
+                        break
+                pu = 0.01
+                ps = (c_s[num] + 1) / (SHORT_WINDOW_DAYS + 100)
+                pr = (c_r[num] + 1) / (WINDOW_DAYS + 100)
+                pl = (c_a[num] + 1) / (h_len + 100)
+                gf = min(g, 30) / 30.0 if g is not None else 0.0
+                pg = pu * (1 + 0.5 * gf)
+                prob = 0.30 * pu + 0.30 * ps + 0.20 * pr + 0.10 * pl + 0.10 * pg
+                p_list.append((num, prob, c_r[num], c_s[num], c_a[num], -(g if g is not None else 9999)))
+            
+            p_list.sort(key=lambda x: (x[1], x[2], x[3], x[4], x[5]), reverse=True)
+            hit = t_tail in [x[0] for x in p_list[:10]]
+            if hit: bt_hits += 1
+            bt_results.append({'date': format_display_date(rows[i]['date']), 'target': f'{t_tail:02d}', 'hit': hit})
+            
+    backtest = {
+        'total': backtest_days,
+        'hits': bt_hits,
+        'hitRate': bt_hits / backtest_days if backtest_days > 0 else 0,
+        'recent': bt_results[-5:]
+    }
+
     return {
+        'backtest': backtest,
         'metadata': {
             'sourceFile': source_file,
             'sourceUrl': RAW_CSV_URL,
@@ -757,6 +819,22 @@ HTML_TEMPLATE = r"""<!DOCTYPE html>
         box-shadow: none;
       }
     }
+
+    .backtest-banner { background: #eef2fa; border: 1px solid #d0dcf2; border-radius: var(--radius); padding: 16px 20px; margin-bottom: 16px; display: flex; justify-content: space-between; align-items: center; gap: 16px; flex-wrap: wrap; }
+    .bt-stat { display: flex; flex-direction: column; }
+    .bt-label { font-size: 12px; color: var(--muted); margin-bottom: 4px; }
+    .bt-val { font-size: 20px; font-weight: 750; color: var(--blue); }
+    .bt-compare { font-size: 12px; font-weight: bold; padding: 3px 6px; border-radius: 4px; margin-left: 8px; }
+    .bt-good { background: #d1fae5; color: #065f46; }
+    .bt-bad { background: #fee2e2; color: #991b1b; }
+    .gap-chart { display: flex; align-items: flex-end; gap: 4px; height: 50px; margin-top: 8px; border-bottom: 1px solid var(--line); position: relative; }
+    .gap-bar { background: var(--teal); width: 14px; border-radius: 2px 2px 0 0; min-height: 2px; }
+    .gap-bar.over { background: var(--red); }
+    .gap-expected { position: absolute; left: 0; right: 0; border-top: 1px dashed var(--red); opacity: 0.5; z-index: 1; pointer-events: none; }
+    .wk-chart { display: flex; align-items: flex-end; gap: 4px; height: 44px; margin-top: 8px; }
+    .wk-bar-container { display: flex; flex-direction: column; align-items: center; gap: 2px; flex: 1; }
+    .wk-bar { background: var(--blue); width: 100%; border-radius: 2px 2px 0 0; min-height: 2px; }
+    .wk-lbl { font-size: 10px; color: var(--muted); }
   </style>
 </head>
 <body>
@@ -776,6 +854,8 @@ HTML_TEMPLATE = r"""<!DOCTYPE html>
       </div>
     </header>
 
+    <section class="backtest-banner" id="backtestBanner" style="display:none"></section>
+    
     <section class="kpi-grid" id="kpis"></section>
 
     <div class="section-title">
@@ -1072,6 +1152,33 @@ HTML_TEMPLATE = r"""<!DOCTYPE html>
       setText('footer', `Dữ liệu đọc từ ${sourceLabel}. Tổng lịch sử: ${meta.historyRows.toLocaleString('vi-VN')} kỳ. Nguồn: ${meta.sourceUrl || meta.sourceFile}.`);
     }
 
+    function renderBacktest() {
+      const bt = APP_DATA.backtest;
+      const el = document.getElementById('backtestBanner');
+      if (!bt || !bt.total) { el.style.display = 'none'; return; }
+      el.style.display = 'flex';
+      const isGood = bt.hitRate >= 0.1;
+      const cls = isGood ? 'bt-good' : 'bt-bad';
+      const label = isGood ? 'Tốt hơn ngẫu nhiên' : 'Kém hơn ngẫu nhiên';
+      const recentHtml = bt.recent.map(r => 
+        `<span style="margin-left:8px; font-size:12px; color:${r.hit ? 'var(--green)' : 'var(--muted)'}">${r.date.slice(0,5)}: ${r.target} ${r.hit ? '✓' : '✗'}</span>`
+      ).join('');
+
+      el.innerHTML = `
+        <div class="bt-stat">
+          <span class="bt-label">Kiểm chứng (Backtest) ${bt.total} ngày</span>
+          <div style="display:flex; align-items:center;">
+            <span class="bt-val">${pct(bt.hitRate)}</span>
+            <span class="bt-compare ${cls}">${label} (Mốc 10%)</span>
+          </div>
+        </div>
+        <div class="bt-stat" style="text-align: right;">
+          <span class="bt-label">Kết quả 5 ngày gần nhất (✓ Trúng / ✗ Trượt)</span>
+          <div>${recentHtml}</div>
+        </div>
+      `;
+    }
+
     function renderKPIs() {
       const meta = APP_DATA.metadata;
       const kpis = [
@@ -1154,14 +1261,41 @@ HTML_TEMPLATE = r"""<!DOCTYPE html>
 
     function renderSelectedDetail() {
       const item = statsByNumber.get(state.selected);
+      const maxGap = Math.max(...(item.gapHistory || []), item.expectedGap || 100);
+      const gapBars = (item.gapHistory || []).map(g => {
+        const h = (g / maxGap) * 50;
+        const cl = g > item.expectedGap ? 'over' : '';
+        return `<div class="gap-bar ${cl}" style="height: ${h}px" title="${g} kỳ"></div>`;
+      }).join('');
+      const expLine = item.expectedGap ? `<div class="gap-expected" style="bottom: ${(item.expectedGap / maxGap) * 50}px" title="Kỳ vọng: ${item.expectedGap.toFixed(1)}"></div>` : '';
+
+      const maxWk = Math.max(...(item.weekdayCounts || [1]));
+      const wkLabels = ['T2','T3','T4','T5','T6','T7','CN'];
+      const wkBars = (item.weekdayCounts || []).map((c, i) => {
+        const h = (c / maxWk) * 30;
+        return `<div class="wk-bar-container"><div class="wk-bar" style="height: ${h}px" title="${c} lần"></div><div class="wk-lbl">${wkLabels[i]}</div></div>`;
+      }).join('');
+
       document.getElementById('selectedDetail').innerHTML = `
-        <div class="detail-number">
-          <strong>${item.number}</strong>
-          <span class="rank-pill">Hạng #${item.rank}</span>
+        <div style="grid-column: 1 / -1; display: flex; justify-content: space-between; align-items: flex-start;">
+          <div class="detail-number">
+            <strong>${item.number}</strong>
+            <span class="rank-pill">Hạng #${item.rank}</span>
+          </div>
+          <div style="text-align: right">
+            <div class="detail-cell"><span>Xác suất mô hình</span><b style="font-size:18px;color:var(--teal)">${pct(item.probability)}</b></div>
+            <div class="detail-cell" style="margin-top:4px"><span>100 ngày gần nhất</span><b>${item.count100} lần</b></div>
+          </div>
         </div>
-        <div class="detail-cell"><span>Xác suất mô hình</span><b>${pct(item.probability)}</b></div>
-        <div class="detail-cell"><span>100 ngày</span><b>${item.count100} lần (${pct(item.recentRate)})</b></div>
-        <div class="detail-cell"><span>Lần gần nhất</span><b>${item.lastSeenDisplay}</b></div>
+        <div style="grid-column: span 2">
+          <div class="detail-cell"><span>Lịch sử khoảng cách (10 lần gần nhất)</span></div>
+          <div class="gap-chart">${expLine}${gapBars}</div>
+          <div style="font-size:10px; color:var(--muted); margin-top:4px">Đỏ: vượt kỳ vọng (${item.expectedGap ? item.expectedGap.toFixed(0) : '-'} kỳ)</div>
+        </div>
+        <div style="grid-column: span 2">
+          <div class="detail-cell"><span>Phân bố theo thứ (Lịch sử)</span></div>
+          <div class="wk-chart">${wkBars}</div>
+        </div>
       `;
     }
 
@@ -1260,6 +1394,7 @@ HTML_TEMPLATE = r"""<!DOCTYPE html>
     function renderDashboard() {
       reindexData();
       renderHeader();
+      renderBacktest();
       renderKPIs();
       renderCandidates();
       renderFrequencyBars();
