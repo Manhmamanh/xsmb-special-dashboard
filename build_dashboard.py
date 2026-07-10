@@ -299,6 +299,37 @@ HTML_TEMPLATE = r"""<!DOCTYPE html>
       font-size: 14px;
     }
 
+    .top-search-wrap {
+      flex: 1;
+      display: flex;
+      justify-content: center;
+      align-items: center;
+      margin: 0 16px;
+    }
+
+    .top-search {
+      background: rgba(255, 255, 255, 0.1);
+      border: 1px solid rgba(255, 255, 255, 0.2);
+      border-radius: 8px;
+      color: #fff;
+      font-size: 16px;
+      padding: 10px 16px;
+      width: 100%;
+      max-width: 320px;
+      transition: all 0.2s;
+    }
+
+    .top-search::placeholder {
+      color: rgba(255, 255, 255, 0.5);
+    }
+
+    .top-search:focus {
+      outline: none;
+      background: rgba(255, 255, 255, 0.15);
+      border-color: rgba(255, 255, 255, 0.4);
+      box-shadow: 0 0 0 3px rgba(255, 255, 255, 0.1);
+    }
+
     .asof {
       border: 1px solid rgba(255, 255, 255, 0.18);
       border-radius: var(--radius);
@@ -862,6 +893,9 @@ HTML_TEMPLATE = r"""<!DOCTYPE html>
         <h1>Thống kê 2 số cuối giải đặc biệt XSMB</h1>
         <p class="subtitle" id="subtitle"></p>
       </div>
+      <div class="top-search-wrap">
+        <input class="top-search" id="numberSearch" type="text" inputmode="numeric" placeholder="Tìm số và xem phân tích nhanh (vd: 54)..." maxlength="2">
+      </div>
       <div class="asof">
         <span>Dự báo tham khảo cho ngày</span>
         <strong id="targetDate"></strong>
@@ -923,7 +957,6 @@ HTML_TEMPLATE = r"""<!DOCTYPE html>
           <h3 style="font-size: 15px; margin: 0;">Bảng đầy đủ 100 số</h3>
           <p style="color: var(--muted); font-size: 12px; margin: 4px 0 0;">Nhấn tiêu đề cột để sắp xếp.</p>
         </div>
-        <input class="search" id="numberSearch" inputmode="numeric" placeholder="Lọc số, ví dụ 54">
       </div>
       <div class="table-wrap">
         <table>
