@@ -1,0 +1,1166 @@
+<!DOCTYPE html>
+<html lang="vi">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>XSMB - Thống kê 2 số cuối giải đặc biệt</title>
+  <style>
+    :root {
+      --bg: #f5f7f9;
+      --surface: #ffffff;
+      --surface-soft: #eef3f6;
+      --ink: #17202a;
+      --muted: #5d6570;
+      --line: #d9e0e7;
+      --header: #20262e;
+      --teal: #087f8c;
+      --blue: #2f5d99;
+      --green: #2f7d58;
+      --gold: #b57418;
+      --red: #b6424b;
+      --violet: #6b5ca5;
+      --radius: 8px;
+      --shadow: 0 1px 3px rgba(15, 23, 42, 0.08);
+    }
+
+    * {
+      box-sizing: border-box;
+    }
+
+    body {
+      margin: 0;
+      background: var(--bg);
+      color: var(--ink);
+      font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Arial, sans-serif;
+      line-height: 1.5;
+    }
+
+    button,
+    input {
+      font: inherit;
+    }
+
+    .app {
+      max-width: 1440px;
+      margin: 0 auto;
+      padding: 16px;
+    }
+
+    .topbar {
+      align-items: flex-start;
+      background: var(--header);
+      border-radius: var(--radius);
+      color: #fff;
+      display: flex;
+      gap: 18px;
+      justify-content: space-between;
+      margin-bottom: 16px;
+      padding: 22px 24px;
+    }
+
+    .title-block {
+      max-width: 820px;
+    }
+
+    h1 {
+      font-size: 24px;
+      line-height: 1.2;
+      margin: 0 0 8px;
+      font-weight: 700;
+    }
+
+    .subtitle {
+      color: rgba(255, 255, 255, 0.74);
+      margin: 0;
+      font-size: 14px;
+    }
+
+    .asof {
+      border: 1px solid rgba(255, 255, 255, 0.18);
+      border-radius: var(--radius);
+      min-width: 250px;
+      padding: 12px 14px;
+      text-align: right;
+    }
+
+    .asof span {
+      color: rgba(255, 255, 255, 0.7);
+      display: block;
+      font-size: 12px;
+      margin-bottom: 4px;
+    }
+
+    .asof strong {
+      font-size: 18px;
+    }
+
+    .status-row {
+      align-items: center;
+      display: flex;
+      gap: 8px;
+      justify-content: flex-end;
+      margin-top: 10px;
+    }
+
+    .data-status {
+      color: rgba(255, 255, 255, 0.72);
+      font-size: 11px;
+      line-height: 1.25;
+    }
+
+    .refresh-button {
+      background: rgba(255, 255, 255, 0.12);
+      border: 1px solid rgba(255, 255, 255, 0.22);
+      border-radius: 6px;
+      color: #fff;
+      cursor: pointer;
+      font-size: 12px;
+      min-height: 30px;
+      padding: 5px 9px;
+      white-space: nowrap;
+    }
+
+    .refresh-button:hover {
+      background: rgba(255, 255, 255, 0.2);
+    }
+
+    .kpi-grid {
+      display: grid;
+      gap: 12px;
+      grid-template-columns: repeat(5, minmax(160px, 1fr));
+      margin-bottom: 16px;
+    }
+
+    .kpi {
+      background: var(--surface);
+      border: 1px solid var(--line);
+      border-radius: var(--radius);
+      box-shadow: var(--shadow);
+      padding: 16px;
+    }
+
+    .kpi-label {
+      color: var(--muted);
+      font-size: 12px;
+      margin-bottom: 8px;
+    }
+
+    .kpi-value {
+      font-size: 26px;
+      font-weight: 750;
+      line-height: 1.15;
+    }
+
+    .kpi-note {
+      color: var(--muted);
+      font-size: 12px;
+      margin-top: 7px;
+    }
+
+    .section-title {
+      align-items: baseline;
+      display: flex;
+      gap: 10px;
+      justify-content: space-between;
+      margin: 20px 0 10px;
+    }
+
+    .section-title h2 {
+      font-size: 18px;
+      margin: 0;
+    }
+
+    .section-title p {
+      color: var(--muted);
+      font-size: 13px;
+      margin: 0;
+    }
+
+    .candidate-grid {
+      display: grid;
+      gap: 10px;
+      grid-template-columns: repeat(10, minmax(96px, 1fr));
+      margin-bottom: 16px;
+    }
+
+    .candidate {
+      background: var(--surface);
+      border: 1px solid var(--line);
+      border-radius: var(--radius);
+      box-shadow: var(--shadow);
+      min-height: 132px;
+      padding: 13px;
+      position: relative;
+    }
+
+    .candidate::before {
+      background: var(--teal);
+      border-radius: 4px;
+      content: "";
+      height: 4px;
+      left: 12px;
+      position: absolute;
+      right: 12px;
+      top: 0;
+    }
+
+    .candidate:nth-child(2n)::before { background: var(--blue); }
+    .candidate:nth-child(3n)::before { background: var(--gold); }
+    .candidate:nth-child(4n)::before { background: var(--green); }
+    .candidate:nth-child(5n)::before { background: var(--red); }
+
+    .rank {
+      color: var(--muted);
+      font-size: 12px;
+    }
+
+    .candidate-number {
+      font-size: 30px;
+      font-weight: 800;
+      margin: 6px 0 2px;
+    }
+
+    .probability {
+      color: var(--teal);
+      font-size: 18px;
+      font-weight: 750;
+    }
+
+    .candidate-meta {
+      color: var(--muted);
+      font-size: 12px;
+      margin-top: 7px;
+    }
+
+    .panel-grid {
+      display: grid;
+      gap: 16px;
+      grid-template-columns: 1.1fr 0.9fr;
+      margin-bottom: 16px;
+    }
+
+    .panel {
+      background: var(--surface);
+      border: 1px solid var(--line);
+      border-radius: var(--radius);
+      box-shadow: var(--shadow);
+      padding: 18px;
+    }
+
+    .panel-header {
+      align-items: center;
+      display: flex;
+      gap: 12px;
+      justify-content: space-between;
+      margin-bottom: 14px;
+    }
+
+    .panel-header h3 {
+      font-size: 15px;
+      margin: 0;
+    }
+
+    .segmented {
+      background: var(--surface-soft);
+      border: 1px solid var(--line);
+      border-radius: var(--radius);
+      display: inline-flex;
+      gap: 3px;
+      padding: 3px;
+    }
+
+    .segmented button {
+      background: transparent;
+      border: 0;
+      border-radius: 6px;
+      color: var(--muted);
+      cursor: pointer;
+      font-size: 12px;
+      min-height: 30px;
+      padding: 5px 9px;
+    }
+
+    .segmented button.active {
+      background: var(--surface);
+      color: var(--ink);
+      box-shadow: var(--shadow);
+      font-weight: 650;
+    }
+
+    .heatmap-wrap {
+      overflow-x: auto;
+    }
+
+    .heatmap {
+      display: grid;
+      gap: 6px;
+      grid-template-columns: repeat(10, minmax(54px, 1fr));
+      min-width: 620px;
+    }
+
+    .heat-cell {
+      aspect-ratio: 1.1;
+      border: 1px solid rgba(23, 32, 42, 0.1);
+      border-radius: 7px;
+      color: var(--ink);
+      cursor: pointer;
+      display: grid;
+      min-height: 54px;
+      padding: 6px;
+      place-items: center;
+      text-align: center;
+    }
+
+    .heat-cell strong {
+      display: block;
+      font-size: 15px;
+      line-height: 1.1;
+    }
+
+    .heat-cell span {
+      color: rgba(23, 32, 42, 0.74);
+      display: block;
+      font-size: 11px;
+      line-height: 1.1;
+      margin-top: 3px;
+    }
+
+    .heat-cell.selected {
+      outline: 3px solid rgba(8, 127, 140, 0.45);
+      outline-offset: 1px;
+    }
+
+    .heat-cell.top10 {
+      border-color: rgba(181, 116, 24, 0.7);
+    }
+
+    .bar-list {
+      display: grid;
+      gap: 8px;
+    }
+
+    .bar-row {
+      align-items: center;
+      display: grid;
+      gap: 9px;
+      grid-template-columns: 42px 1fr 56px;
+    }
+
+    .bar-label {
+      font-weight: 750;
+    }
+
+    .bar-track {
+      background: var(--surface-soft);
+      border-radius: 999px;
+      height: 16px;
+      overflow: hidden;
+    }
+
+    .bar-fill {
+      background: var(--blue);
+      border-radius: 999px;
+      height: 100%;
+      min-width: 3px;
+    }
+
+    .bar-value {
+      color: var(--muted);
+      font-size: 12px;
+      text-align: right;
+    }
+
+    .selected-detail {
+      background: var(--surface-soft);
+      border: 1px solid var(--line);
+      border-radius: var(--radius);
+      display: grid;
+      gap: 10px;
+      grid-template-columns: repeat(4, 1fr);
+      margin-top: 16px;
+      padding: 12px;
+    }
+
+    .detail-number {
+      align-items: center;
+      display: flex;
+      gap: 10px;
+    }
+
+    .detail-number strong {
+      font-size: 34px;
+      line-height: 1;
+    }
+
+    .detail-cell span {
+      color: var(--muted);
+      display: block;
+      font-size: 11px;
+      margin-bottom: 3px;
+    }
+
+    .detail-cell b {
+      font-size: 15px;
+    }
+
+    .timeline {
+      display: grid;
+      gap: 6px;
+      grid-template-columns: repeat(25, 1fr);
+    }
+
+    .draw-dot {
+      align-items: center;
+      background: var(--surface-soft);
+      border: 1px solid var(--line);
+      border-radius: 6px;
+      cursor: pointer;
+      display: flex;
+      flex-direction: column;
+      justify-content: center;
+      min-height: 44px;
+      padding: 4px;
+    }
+
+    .draw-dot b {
+      font-size: 13px;
+      line-height: 1.1;
+    }
+
+    .draw-dot span {
+      color: var(--muted);
+      font-size: 9px;
+      line-height: 1.1;
+      margin-top: 2px;
+    }
+
+    .draw-dot.top10 {
+      background: rgba(181, 116, 24, 0.12);
+      border-color: rgba(181, 116, 24, 0.45);
+    }
+
+    .draw-dot.selected {
+      background: rgba(8, 127, 140, 0.12);
+      border-color: rgba(8, 127, 140, 0.58);
+    }
+
+    .method {
+      background: #fff9ed;
+      border: 1px solid #ead7b8;
+      border-radius: var(--radius);
+      color: #49361c;
+      font-size: 13px;
+      margin-bottom: 16px;
+      padding: 14px 16px;
+    }
+
+    .method strong {
+      color: #2b2218;
+    }
+
+    .table-toolbar {
+      align-items: center;
+      display: flex;
+      gap: 10px;
+      justify-content: space-between;
+      margin-bottom: 12px;
+    }
+
+    .search {
+      border: 1px solid var(--line);
+      border-radius: var(--radius);
+      min-height: 36px;
+      padding: 7px 10px;
+      width: 190px;
+    }
+
+    .table-wrap {
+      overflow-x: auto;
+    }
+
+    table {
+      border-collapse: collapse;
+      font-size: 13px;
+      min-width: 920px;
+      width: 100%;
+    }
+
+    th,
+    td {
+      border-bottom: 1px solid #edf0f3;
+      padding: 9px 10px;
+      text-align: left;
+      white-space: nowrap;
+    }
+
+    th {
+      color: var(--muted);
+      cursor: pointer;
+      font-size: 12px;
+      font-weight: 700;
+      user-select: none;
+    }
+
+    tbody tr:hover {
+      background: #f8fafb;
+    }
+
+    .num-pill {
+      background: var(--surface-soft);
+      border: 1px solid var(--line);
+      border-radius: 999px;
+      display: inline-block;
+      font-weight: 750;
+      min-width: 42px;
+      padding: 3px 8px;
+      text-align: center;
+    }
+
+    .rank-pill {
+      color: var(--muted);
+      font-size: 12px;
+      font-weight: 700;
+    }
+
+    .footer {
+      color: var(--muted);
+      font-size: 12px;
+      margin: 18px 0 4px;
+      text-align: center;
+    }
+
+    @media (max-width: 1180px) {
+      .kpi-grid {
+        grid-template-columns: repeat(3, 1fr);
+      }
+
+      .candidate-grid {
+        grid-template-columns: repeat(5, 1fr);
+      }
+
+      .panel-grid {
+        grid-template-columns: 1fr;
+      }
+    }
+
+    @media (max-width: 760px) {
+      .app {
+        padding: 10px;
+      }
+
+      .topbar,
+      .table-toolbar,
+      .panel-header,
+      .section-title {
+        align-items: flex-start;
+        flex-direction: column;
+      }
+
+      .asof {
+        min-width: 0;
+        text-align: left;
+        width: 100%;
+      }
+
+      .kpi-grid {
+        grid-template-columns: repeat(2, 1fr);
+      }
+
+      .candidate-grid {
+        grid-template-columns: repeat(2, minmax(0, 1fr));
+      }
+
+      .selected-detail {
+        grid-template-columns: repeat(2, 1fr);
+      }
+
+      .timeline {
+        grid-template-columns: repeat(10, 1fr);
+      }
+    }
+
+    @media print {
+      body {
+        background: #fff;
+      }
+
+      .segmented,
+      .search {
+        display: none;
+      }
+
+      .panel,
+      .kpi,
+      .candidate {
+        box-shadow: none;
+      }
+    }
+  </style>
+</head>
+<body>
+  <main class="app">
+    <header class="topbar">
+      <div class="title-block">
+        <h1>Thống kê 2 số cuối giải đặc biệt XSMB</h1>
+        <p class="subtitle" id="subtitle"></p>
+      </div>
+      <div class="asof">
+        <span>Dự báo tham khảo cho ngày</span>
+        <strong id="targetDate"></strong>
+        <div class="status-row">
+          <span class="data-status" id="dataStatus">Đang chuẩn bị dữ liệu...</span>
+          <button class="refresh-button" id="refreshButton" type="button">Làm mới</button>
+        </div>
+      </div>
+    </header>
+
+    <section class="kpi-grid" id="kpis"></section>
+
+    <div class="section-title">
+      <h2>10 số ưu tiên theo mô hình</h2>
+      <p>Xác suất đã co về mốc lý thuyết 1% để tránh phóng đại từ mẫu 100 ngày.</p>
+    </div>
+    <section class="candidate-grid" id="candidateGrid"></section>
+
+    <div class="method">
+      <strong>Lưu ý thống kê:</strong> nếu kết quả độc lập và công bằng, mỗi số từ 00 đến 99 đều có xác suất lý thuyết khoảng 1%. Bảng này không dự đoán chắc chắn; nó là điểm số xác suất bảo thủ, trộn 60% xác suất đều, 25% tần suất 100 ngày đã làm trơn Bayesian, và 15% tần suất lịch sử toàn bộ file.
+    </div>
+
+    <section class="panel-grid">
+      <div class="panel">
+        <div class="panel-header">
+          <h3>Bản đồ 00-99</h3>
+          <div class="segmented" aria-label="Chỉ số bản đồ">
+            <button class="active" data-metric="count100">100 ngày</button>
+            <button data-metric="probability">Xác suất</button>
+            <button data-metric="gap">Khoảng cách</button>
+          </div>
+        </div>
+        <div class="heatmap-wrap">
+          <div class="heatmap" id="heatmap"></div>
+        </div>
+        <div class="selected-detail" id="selectedDetail"></div>
+      </div>
+
+      <div class="panel">
+        <div class="panel-header">
+          <h3>Tần suất cao nhất trong 100 ngày</h3>
+        </div>
+        <div class="bar-list" id="frequencyBars"></div>
+      </div>
+    </section>
+
+    <section class="panel">
+      <div class="panel-header">
+        <h3>Dòng thời gian 100 kỳ gần nhất</h3>
+      </div>
+      <div class="timeline" id="timeline"></div>
+    </section>
+
+    <section class="panel" style="margin-top: 16px;">
+      <div class="table-toolbar">
+        <div>
+          <h3 style="font-size: 15px; margin: 0;">Bảng đầy đủ 100 số</h3>
+          <p style="color: var(--muted); font-size: 12px; margin: 4px 0 0;">Nhấn tiêu đề cột để sắp xếp.</p>
+        </div>
+        <input class="search" id="numberSearch" inputmode="numeric" placeholder="Lọc số, ví dụ 54">
+      </div>
+      <div class="table-wrap">
+        <table>
+          <thead>
+            <tr>
+              <th data-sort="rank">Hạng</th>
+              <th data-sort="number">Số</th>
+              <th data-sort="probability">Xác suất mô hình</th>
+              <th data-sort="count100">Số lần / 100 ngày</th>
+              <th data-sort="recentRate">Tỷ lệ 100 ngày</th>
+              <th data-sort="count30">Số lần / 30 ngày</th>
+              <th data-sort="gap">Khoảng cách</th>
+              <th data-sort="countAll">Số lần toàn lịch sử</th>
+              <th data-sort="lastSeen">Lần gần nhất</th>
+            </tr>
+          </thead>
+          <tbody id="numbersTable"></tbody>
+        </table>
+      </div>
+    </section>
+
+    <section class="panel" style="margin-top: 16px;">
+      <div class="panel-header">
+        <h3>100 kết quả giải đặc biệt gần nhất</h3>
+      </div>
+      <div class="table-wrap">
+        <table>
+          <thead>
+            <tr>
+              <th>Ngày</th>
+              <th>Giải đặc biệt</th>
+              <th>2 số cuối</th>
+              <th>Tần suất số này / 100 ngày</th>
+              <th>Xác suất mô hình</th>
+            </tr>
+          </thead>
+          <tbody id="drawTable"></tbody>
+        </table>
+      </div>
+    </section>
+
+    <div class="footer" id="footer"></div>
+  </main>
+
+  <script>
+    const EMBEDDED_APP_DATA = {"metadata":{"sourceFile":"/Users/Kuben/Downloads/vietnam-lottery-xsmb-analysis-main.zip","sourceUrl":"https://raw.githubusercontent.com/khiemdoan/vietnam-lottery-xsmb-analysis/refs/heads/main/data/xsmb.csv","sourceMode":"embedded","historyRows":7486,"windowDays":100,"shortWindowDays":30,"startDate":"2026-04-01","endDate":"2026-07-09","startDateDisplay":"01-04-2026","endDateDisplay":"09-07-2026","targetDate":"2026-07-10","targetDateDisplay":"10-07-2026","uniqueCount":64,"missingCount":36,"missingNumbers":["01","02","07","09","10","15","18","19","22","24","26","27","29","30","31","34","45","46","49","56","57","58","62","70","72","73","74","77","86","88","90","91","95","96","98","99"],"mostCommonCount":4,"mostCommonNumbers":["04","54"],"latestTail":"85","latestSpecial":"69185"},"last100":[{"date":"2026-04-01","dateDisplay":"01-04-2026","special":31666,"specialDisplay":"31666","tail":66,"tailDisplay":"66"},{"date":"2026-04-02","dateDisplay":"02-04-2026","special":91267,"specialDisplay":"91267","tail":67,"tailDisplay":"67"},{"date":"2026-04-03","dateDisplay":"03-04-2026","special":12944,"specialDisplay":"12944","tail":44,"tailDisplay":"44"},{"date":"2026-04-04","dateDisplay":"04-04-2026","special":29737,"specialDisplay":"29737","tail":37,"tailDisplay":"37"},{"date":"2026-04-05","dateDisplay":"05-04-2026","special":2855,"specialDisplay":"02855","tail":55,"tailDisplay":"55"},{"date":"2026-04-06","dateDisplay":"06-04-2026","special":76406,"specialDisplay":"76406","tail":6,"tailDisplay":"06"},{"date":"2026-04-07","dateDisplay":"07-04-2026","special":2382,"specialDisplay":"02382","tail":82,"tailDisplay":"82"},{"date":"2026-04-08","dateDisplay":"08-04-2026","special":27450,"specialDisplay":"27450","tail":50,"tailDisplay":"50"},{"date":"2026-04-09","dateDisplay":"09-04-2026","special":45625,"specialDisplay":"45625","tail":25,"tailDisplay":"25"},{"date":"2026-04-10","dateDisplay":"10-04-2026","special":46120,"specialDisplay":"46120","tail":20,"tailDisplay":"20"},{"date":"2026-04-11","dateDisplay":"11-04-2026","special":24204,"specialDisplay":"24204","tail":4,"tailDisplay":"04"},{"date":"2026-04-12","dateDisplay":"12-04-2026","special":12000,"specialDisplay":"12000","tail":0,"tailDisplay":"00"},{"date":"2026-04-13","dateDisplay":"13-04-2026","special":22738,"specialDisplay":"22738","tail":38,"tailDisplay":"38"},{"date":"2026-04-14","dateDisplay":"14-04-2026","special":92763,"specialDisplay":"92763","tail":63,"tailDisplay":"63"},{"date":"2026-04-15","dateDisplay":"15-04-2026","special":3714,"specialDisplay":"03714","tail":14,"tailDisplay":"14"},{"date":"2026-04-16","dateDisplay":"16-04-2026","special":35035,"specialDisplay":"35035","tail":35,"tailDisplay":"35"},{"date":"2026-04-17","dateDisplay":"17-04-2026","special":38455,"specialDisplay":"38455","tail":55,"tailDisplay":"55"},{"date":"2026-04-18","dateDisplay":"18-04-2026","special":17243,"specialDisplay":"17243","tail":43,"tailDisplay":"43"},{"date":"2026-04-19","dateDisplay":"19-04-2026","special":93725,"specialDisplay":"93725","tail":25,"tailDisplay":"25"},{"date":"2026-04-20","dateDisplay":"20-04-2026","special":74197,"specialDisplay":"74197","tail":97,"tailDisplay":"97"},{"date":"2026-04-21","dateDisplay":"21-04-2026","special":48076,"specialDisplay":"48076","tail":76,"tailDisplay":"76"},{"date":"2026-04-22","dateDisplay":"22-04-2026","special":36948,"specialDisplay":"36948","tail":48,"tailDisplay":"48"},{"date":"2026-04-23","dateDisplay":"23-04-2026","special":66239,"specialDisplay":"66239","tail":39,"tailDisplay":"39"},{"date":"2026-04-24","dateDisplay":"24-04-2026","special":9876,"specialDisplay":"09876","tail":76,"tailDisplay":"76"},{"date":"2026-04-25","dateDisplay":"25-04-2026","special":8717,"specialDisplay":"08717","tail":17,"tailDisplay":"17"},{"date":"2026-04-26","dateDisplay":"26-04-2026","special":38228,"specialDisplay":"38228","tail":28,"tailDisplay":"28"},{"date":"2026-04-27","dateDisplay":"27-04-2026","special":10059,"specialDisplay":"10059","tail":59,"tailDisplay":"59"},{"date":"2026-04-28","dateDisplay":"28-04-2026","special":45254,"specialDisplay":"45254","tail":54,"tailDisplay":"54"},{"date":"2026-04-29","dateDisplay":"29-04-2026","special":86569,"specialDisplay":"86569","tail":69,"tailDisplay":"69"},{"date":"2026-04-30","dateDisplay":"30-04-2026","special":82075,"specialDisplay":"82075","tail":75,"tailDisplay":"75"},{"date":"2026-05-01","dateDisplay":"01-05-2026","special":96637,"specialDisplay":"96637","tail":37,"tailDisplay":"37"},{"date":"2026-05-02","dateDisplay":"02-05-2026","special":16132,"specialDisplay":"16132","tail":32,"tailDisplay":"32"},{"date":"2026-05-03","dateDisplay":"03-05-2026","special":32964,"specialDisplay":"32964","tail":64,"tailDisplay":"64"},{"date":"2026-05-04","dateDisplay":"04-05-2026","special":11251,"specialDisplay":"11251","tail":51,"tailDisplay":"51"},{"date":"2026-05-05","dateDisplay":"05-05-2026","special":22512,"specialDisplay":"22512","tail":12,"tailDisplay":"12"},{"date":"2026-05-06","dateDisplay":"06-05-2026","special":80241,"specialDisplay":"80241","tail":41,"tailDisplay":"41"},{"date":"2026-05-07","dateDisplay":"07-05-2026","special":14540,"specialDisplay":"14540","tail":40,"tailDisplay":"40"},{"date":"2026-05-08","dateDisplay":"08-05-2026","special":29147,"specialDisplay":"29147","tail":47,"tailDisplay":"47"},{"date":"2026-05-09","dateDisplay":"09-05-2026","special":26192,"specialDisplay":"26192","tail":92,"tailDisplay":"92"},{"date":"2026-05-10","dateDisplay":"10-05-2026","special":76223,"specialDisplay":"76223","tail":23,"tailDisplay":"23"},{"date":"2026-05-11","dateDisplay":"11-05-2026","special":52117,"specialDisplay":"52117","tail":17,"tailDisplay":"17"},{"date":"2026-05-12","dateDisplay":"12-05-2026","special":52233,"specialDisplay":"52233","tail":33,"tailDisplay":"33"},{"date":"2026-05-13","dateDisplay":"13-05-2026","special":64138,"specialDisplay":"64138","tail":38,"tailDisplay":"38"},{"date":"2026-05-14","dateDisplay":"14-05-2026","special":76669,"specialDisplay":"76669","tail":69,"tailDisplay":"69"},{"date":"2026-05-15","dateDisplay":"15-05-2026","special":67294,"specialDisplay":"67294","tail":94,"tailDisplay":"94"},{"date":"2026-05-16","dateDisplay":"16-05-2026","special":19404,"specialDisplay":"19404","tail":4,"tailDisplay":"04"},{"date":"2026-05-17","dateDisplay":"17-05-2026","special":96684,"specialDisplay":"96684","tail":84,"tailDisplay":"84"},{"date":"2026-05-18","dateDisplay":"18-05-2026","special":55361,"specialDisplay":"55361","tail":61,"tailDisplay":"61"},{"date":"2026-05-19","dateDisplay":"19-05-2026","special":81754,"specialDisplay":"81754","tail":54,"tailDisplay":"54"},{"date":"2026-05-20","dateDisplay":"20-05-2026","special":88568,"specialDisplay":"88568","tail":68,"tailDisplay":"68"},{"date":"2026-05-21","dateDisplay":"21-05-2026","special":72685,"specialDisplay":"72685","tail":85,"tailDisplay":"85"},{"date":"2026-05-22","dateDisplay":"22-05-2026","special":72939,"specialDisplay":"72939","tail":39,"tailDisplay":"39"},{"date":"2026-05-23","dateDisplay":"23-05-2026","special":38021,"specialDisplay":"38021","tail":21,"tailDisplay":"21"},{"date":"2026-05-24","dateDisplay":"24-05-2026","special":20104,"specialDisplay":"20104","tail":4,"tailDisplay":"04"},{"date":"2026-05-25","dateDisplay":"25-05-2026","special":97281,"specialDisplay":"97281","tail":81,"tailDisplay":"81"},{"date":"2026-05-26","dateDisplay":"26-05-2026","special":49111,"specialDisplay":"49111","tail":11,"tailDisplay":"11"},{"date":"2026-05-27","dateDisplay":"27-05-2026","special":61513,"specialDisplay":"61513","tail":13,"tailDisplay":"13"},{"date":"2026-05-28","dateDisplay":"28-05-2026","special":250,"specialDisplay":"00250","tail":50,"tailDisplay":"50"},{"date":"2026-05-29","dateDisplay":"29-05-2026","special":77954,"specialDisplay":"77954","tail":54,"tailDisplay":"54"},{"date":"2026-05-30","dateDisplay":"30-05-2026","special":17743,"specialDisplay":"17743","tail":43,"tailDisplay":"43"},{"date":"2026-05-31","dateDisplay":"31-05-2026","special":24042,"specialDisplay":"24042","tail":42,"tailDisplay":"42"},{"date":"2026-06-01","dateDisplay":"01-06-2026","special":90353,"specialDisplay":"90353","tail":53,"tailDisplay":"53"},{"date":"2026-06-02","dateDisplay":"02-06-2026","special":73823,"specialDisplay":"73823","tail":23,"tailDisplay":"23"},{"date":"2026-06-03","dateDisplay":"03-06-2026","special":2636,"specialDisplay":"02636","tail":36,"tailDisplay":"36"},{"date":"2026-06-04","dateDisplay":"04-06-2026","special":5583,"specialDisplay":"05583","tail":83,"tailDisplay":"83"},{"date":"2026-06-05","dateDisplay":"05-06-2026","special":74978,"specialDisplay":"74978","tail":78,"tailDisplay":"78"},{"date":"2026-06-06","dateDisplay":"06-06-2026","special":33465,"specialDisplay":"33465","tail":65,"tailDisplay":"65"},{"date":"2026-06-07","dateDisplay":"07-06-2026","special":15393,"specialDisplay":"15393","tail":93,"tailDisplay":"93"},{"date":"2026-06-08","dateDisplay":"08-06-2026","special":53505,"specialDisplay":"53505","tail":5,"tailDisplay":"05"},{"date":"2026-06-09","dateDisplay":"09-06-2026","special":7251,"specialDisplay":"07251","tail":51,"tailDisplay":"51"},{"date":"2026-06-10","dateDisplay":"10-06-2026","special":4308,"specialDisplay":"04308","tail":8,"tailDisplay":"08"},{"date":"2026-06-11","dateDisplay":"11-06-2026","special":99983,"specialDisplay":"99983","tail":83,"tailDisplay":"83"},{"date":"2026-06-12","dateDisplay":"12-06-2026","special":24889,"specialDisplay":"24889","tail":89,"tailDisplay":"89"},{"date":"2026-06-13","dateDisplay":"13-06-2026","special":60014,"specialDisplay":"60014","tail":14,"tailDisplay":"14"},{"date":"2026-06-14","dateDisplay":"14-06-2026","special":63000,"specialDisplay":"63000","tail":0,"tailDisplay":"00"},{"date":"2026-06-15","dateDisplay":"15-06-2026","special":71680,"specialDisplay":"71680","tail":80,"tailDisplay":"80"},{"date":"2026-06-16","dateDisplay":"16-06-2026","special":80384,"specialDisplay":"80384","tail":84,"tailDisplay":"84"},{"date":"2026-06-17","dateDisplay":"17-06-2026","special":71203,"specialDisplay":"71203","tail":3,"tailDisplay":"03"},{"date":"2026-06-18","dateDisplay":"18-06-2026","special":15032,"specialDisplay":"15032","tail":32,"tailDisplay":"32"},{"date":"2026-06-19","dateDisplay":"19-06-2026","special":63155,"specialDisplay":"63155","tail":55,"tailDisplay":"55"},{"date":"2026-06-20","dateDisplay":"20-06-2026","special":54860,"specialDisplay":"54860","tail":60,"tailDisplay":"60"},{"date":"2026-06-21","dateDisplay":"21-06-2026","special":28083,"specialDisplay":"28083","tail":83,"tailDisplay":"83"},{"date":"2026-06-22","dateDisplay":"22-06-2026","special":62136,"specialDisplay":"62136","tail":36,"tailDisplay":"36"},{"date":"2026-06-23","dateDisplay":"23-06-2026","special":50437,"specialDisplay":"50437","tail":37,"tailDisplay":"37"},{"date":"2026-06-24","dateDisplay":"24-06-2026","special":52751,"specialDisplay":"52751","tail":51,"tailDisplay":"51"},{"date":"2026-06-25","dateDisplay":"25-06-2026","special":1816,"specialDisplay":"01816","tail":16,"tailDisplay":"16"},{"date":"2026-06-26","dateDisplay":"26-06-2026","special":54804,"specialDisplay":"54804","tail":4,"tailDisplay":"04"},{"date":"2026-06-27","dateDisplay":"27-06-2026","special":9253,"specialDisplay":"09253","tail":53,"tailDisplay":"53"},{"date":"2026-06-28","dateDisplay":"28-06-2026","special":12452,"specialDisplay":"12452","tail":52,"tailDisplay":"52"},{"date":"2026-06-29","dateDisplay":"29-06-2026","special":37642,"specialDisplay":"37642","tail":42,"tailDisplay":"42"},{"date":"2026-06-30","dateDisplay":"30-06-2026","special":60468,"specialDisplay":"60468","tail":68,"tailDisplay":"68"},{"date":"2026-07-01","dateDisplay":"01-07-2026","special":31854,"specialDisplay":"31854","tail":54,"tailDisplay":"54"},{"date":"2026-07-02","dateDisplay":"02-07-2026","special":51139,"specialDisplay":"51139","tail":39,"tailDisplay":"39"},{"date":"2026-07-03","dateDisplay":"03-07-2026","special":18165,"specialDisplay":"18165","tail":65,"tailDisplay":"65"},{"date":"2026-07-04","dateDisplay":"04-07-2026","special":14887,"specialDisplay":"14887","tail":87,"tailDisplay":"87"},{"date":"2026-07-05","dateDisplay":"05-07-2026","special":66771,"specialDisplay":"66771","tail":71,"tailDisplay":"71"},{"date":"2026-07-06","dateDisplay":"06-07-2026","special":43497,"specialDisplay":"43497","tail":97,"tailDisplay":"97"},{"date":"2026-07-07","dateDisplay":"07-07-2026","special":92579,"specialDisplay":"92579","tail":79,"tailDisplay":"79"},{"date":"2026-07-08","dateDisplay":"08-07-2026","special":95089,"specialDisplay":"95089","tail":89,"tailDisplay":"89"},{"date":"2026-07-09","dateDisplay":"09-07-2026","special":69185,"specialDisplay":"69185","tail":85,"tailDisplay":"85"}],"numberStats":[{"number":"00","value":0,"count100":2,"count30":1,"countAll":81,"gap":25,"lastSeen":"2026-06-14","lastSeenDisplay":"14-06-2026","recentRate":0.02,"historyRate":0.010820197702377772,"probability":0.011371407856577906,"rank":13},{"number":"01","value":1,"count100":0,"count30":0,"countAll":85,"gap":140,"lastSeen":"2026-02-15","lastSeenDisplay":"15-02-2026","recentRate":0.0,"historyRate":0.011354528453112477,"probability":0.008950500922752439,"rank":69},{"number":"02","value":2,"count100":0,"count30":0,"countAll":68,"gap":241,"lastSeen":"2025-11-06","lastSeenDisplay":"06-11-2025","recentRate":0.0,"historyRate":0.009083622762489982,"probability":0.008614355391510679,"rank":92},{"number":"03","value":3,"count100":1,"count30":1,"countAll":77,"gap":22,"lastSeen":"2026-06-17","lastSeenDisplay":"17-06-2026","recentRate":0.01,"historyRate":0.010285866951643068,"probability":0.010042314790403375,"rank":37},{"number":"04","value":4,"count100":4,"count30":1,"countAll":75,"gap":13,"lastSeen":"2026-06-26","lastSeenDisplay":"26-06-2026","recentRate":0.04,"historyRate":0.010018701576275714,"probability":0.01375276825731611,"rank":2},{"number":"05","value":5,"count100":1,"count30":0,"countAll":83,"gap":31,"lastSeen":"2026-06-08","lastSeenDisplay":"08-06-2026","recentRate":0.01,"historyRate":0.011087363077745124,"probability":0.010160954389665173,"rank":33},{"number":"06","value":6,"count100":1,"count30":0,"countAll":77,"gap":94,"lastSeen":"2026-04-06","lastSeenDisplay":"06-04-2026","recentRate":0.01,"historyRate":0.010285866951643068,"probability":0.010042314790403375,"rank":38},{"number":"07","value":7,"count100":0,"count30":0,"countAll":63,"gap":294,"lastSeen":"2025-09-14","lastSeenDisplay":"14-09-2025","recentRate":0.0,"historyRate":0.0084157093240716,"probability":0.008515489058792514,"rank":98},{"number":"08","value":8,"count100":1,"count30":1,"countAll":84,"gap":29,"lastSeen":"2026-06-10","lastSeenDisplay":"10-06-2026","recentRate":0.01,"historyRate":0.0112209457654288,"probability":0.010180727656208807,"rank":31},{"number":"09","value":9,"count100":0,"count30":0,"countAll":89,"gap":275,"lastSeen":"2025-10-03","lastSeenDisplay":"03-10-2025","recentRate":0.0,"historyRate":0.011888859203847182,"probability":0.00902959398892697,"rank":67},{"number":"10","value":10,"count100":0,"count30":0,"countAll":80,"gap":252,"lastSeen":"2025-10-26","lastSeenDisplay":"26-10-2025","recentRate":0.0,"historyRate":0.010686615014694095,"probability":0.008851634590034274,"rank":74},{"number":"11","value":11,"count100":1,"count30":0,"countAll":73,"gap":44,"lastSeen":"2026-05-26","lastSeenDisplay":"26-05-2026","recentRate":0.01,"historyRate":0.009751536200908363,"probability":0.009963221724228843,"rank":46},{"number":"12","value":12,"count100":1,"count30":0,"countAll":67,"gap":65,"lastSeen":"2026-05-05","lastSeenDisplay":"05-05-2026","recentRate":0.01,"historyRate":0.008950040074806305,"probability":0.009844582124967045,"rank":59},{"number":"13","value":13,"count100":1,"count30":0,"countAll":68,"gap":43,"lastSeen":"2026-05-27","lastSeenDisplay":"27-05-2026","recentRate":0.01,"historyRate":0.009083622762489982,"probability":0.009864355391510678,"rank":54},{"number":"14","value":14,"count100":2,"count30":1,"countAll":70,"gap":26,"lastSeen":"2026-06-13","lastSeenDisplay":"13-06-2026","recentRate":0.02,"historyRate":0.009350788137857334,"probability":0.011153901924597944,"rank":23},{"number":"15","value":15,"count100":0,"count30":0,"countAll":85,"gap":366,"lastSeen":"2025-07-04","lastSeenDisplay":"04-07-2025","recentRate":0.0,"historyRate":0.011354528453112477,"probability":0.008950500922752439,"rank":70},{"number":"16","value":16,"count100":1,"count30":1,"countAll":75,"gap":14,"lastSeen":"2026-06-25","lastSeenDisplay":"25-06-2026","recentRate":0.01,"historyRate":0.010018701576275714,"probability":0.01000276825731611,"rank":41},{"number":"17","value":17,"count100":2,"count30":0,"countAll":84,"gap":59,"lastSeen":"2026-05-11","lastSeenDisplay":"11-05-2026","recentRate":0.02,"historyRate":0.0112209457654288,"probability":0.011430727656208806,"rank":11},{"number":"18","value":18,"count100":0,"count30":0,"countAll":77,"gap":369,"lastSeen":"2025-07-01","lastSeenDisplay":"01-07-2025","recentRate":0.0,"historyRate":0.010285866951643068,"probability":0.008792314790403375,"rank":79},{"number":"19","value":19,"count100":0,"count30":0,"countAll":75,"gap":127,"lastSeen":"2026-03-04","lastSeenDisplay":"04-03-2026","recentRate":0.0,"historyRate":0.010018701576275714,"probability":0.008752768257316109,"rank":81},{"number":"20","value":20,"count100":1,"count30":0,"countAll":59,"gap":90,"lastSeen":"2026-04-10","lastSeenDisplay":"10-04-2026","recentRate":0.01,"historyRate":0.007881378573336895,"probability":0.009686395992617981,"rank":62},{"number":"21","value":21,"count100":1,"count30":0,"countAll":67,"gap":47,"lastSeen":"2026-05-23","lastSeenDisplay":"23-05-2026","recentRate":0.01,"historyRate":0.008950040074806305,"probability":0.009844582124967045,"rank":57},{"number":"22","value":22,"count100":0,"count30":0,"countAll":77,"gap":103,"lastSeen":"2026-03-28","lastSeenDisplay":"28-03-2026","recentRate":0.0,"historyRate":0.010285866951643068,"probability":0.008792314790403375,"rank":77},{"number":"23","value":23,"count100":2,"count30":0,"countAll":74,"gap":37,"lastSeen":"2026-06-02","lastSeenDisplay":"02-06-2026","recentRate":0.02,"historyRate":0.009885118888592039,"probability":0.011232994990772476,"rank":20},{"number":"24","value":24,"count100":0,"count30":0,"countAll":91,"gap":111,"lastSeen":"2026-03-20","lastSeenDisplay":"20-03-2026","recentRate":0.0,"historyRate":0.012156024579214534,"probability":0.009069140522014237,"rank":66},{"number":"25","value":25,"count100":2,"count30":0,"countAll":72,"gap":81,"lastSeen":"2026-04-19","lastSeenDisplay":"19-04-2026","recentRate":0.02,"historyRate":0.009617953513224685,"probability":0.011193448457685209,"rank":21},{"number":"26","value":26,"count100":0,"count30":0,"countAll":66,"gap":210,"lastSeen":"2025-12-07","lastSeenDisplay":"07-12-2025","recentRate":0.0,"historyRate":0.008816457387122629,"probability":0.008574808858423412,"rank":96},{"number":"27","value":27,"count100":0,"count30":0,"countAll":71,"gap":173,"lastSeen":"2026-01-13","lastSeenDisplay":"13-01-2026","recentRate":0.0,"historyRate":0.00948437082554101,"probability":0.008673675191141577,"rank":90},{"number":"28","value":28,"count100":1,"count30":0,"countAll":53,"gap":74,"lastSeen":"2026-04-26","lastSeenDisplay":"26-04-2026","recentRate":0.01,"historyRate":0.007079882447234839,"probability":0.009567756393356183,"rank":64},{"number":"29","value":29,"count100":0,"count30":0,"countAll":72,"gap":107,"lastSeen":"2026-03-24","lastSeenDisplay":"24-03-2026","recentRate":0.0,"historyRate":0.009617953513224685,"probability":0.00869344845768521,"rank":87},{"number":"30","value":30,"count100":0,"count30":0,"countAll":73,"gap":141,"lastSeen":"2026-02-14","lastSeenDisplay":"14-02-2026","recentRate":0.0,"historyRate":0.009751536200908363,"probability":0.008713221724228844,"rank":85},{"number":"31","value":31,"count100":0,"count30":0,"countAll":61,"gap":298,"lastSeen":"2025-09-10","lastSeenDisplay":"10-09-2025","recentRate":0.0,"historyRate":0.008148543948704248,"probability":0.008475942525705247,"rank":100},{"number":"32","value":32,"count100":2,"count30":1,"countAll":88,"gap":21,"lastSeen":"2026-06-18","lastSeenDisplay":"18-06-2026","recentRate":0.02,"historyRate":0.011755276516163505,"probability":0.011509820722383338,"rank":10},{"number":"33","value":33,"count100":1,"count30":0,"countAll":68,"gap":58,"lastSeen":"2026-05-12","lastSeenDisplay":"12-05-2026","recentRate":0.01,"historyRate":0.009083622762489982,"probability":0.009864355391510678,"rank":55},{"number":"34","value":34,"count100":0,"count30":0,"countAll":83,"gap":219,"lastSeen":"2025-11-28","lastSeenDisplay":"28-11-2025","recentRate":0.0,"historyRate":0.011087363077745124,"probability":0.008910954389665174,"rank":71},{"number":"35","value":35,"count100":1,"count30":0,"countAll":67,"gap":84,"lastSeen":"2026-04-16","lastSeenDisplay":"16-04-2026","recentRate":0.01,"historyRate":0.008950040074806305,"probability":0.009844582124967045,"rank":60},{"number":"36","value":36,"count100":2,"count30":1,"countAll":104,"gap":17,"lastSeen":"2026-06-22","lastSeenDisplay":"22-06-2026","recentRate":0.02,"historyRate":0.013892599519102324,"probability":0.011826192987081466,"rank":8},{"number":"37","value":37,"count100":3,"count30":1,"countAll":64,"gap":16,"lastSeen":"2026-06-23","lastSeenDisplay":"23-06-2026","recentRate":0.03,"historyRate":0.008549292011755277,"probability":0.012285262325336145,"rank":7},{"number":"38","value":38,"count100":2,"count30":0,"countAll":78,"gap":57,"lastSeen":"2026-05-13","lastSeenDisplay":"13-05-2026","recentRate":0.02,"historyRate":0.010419449639326743,"probability":0.011312088056947008,"rank":15},{"number":"39","value":39,"count100":3,"count30":1,"countAll":92,"gap":7,"lastSeen":"2026-07-02","lastSeenDisplay":"02-07-2026","recentRate":0.03,"historyRate":0.01228960726689821,"probability":0.012838913788557869,"rank":3},{"number":"40","value":40,"count100":1,"count30":0,"countAll":57,"gap":63,"lastSeen":"2026-05-07","lastSeenDisplay":"07-05-2026","recentRate":0.01,"historyRate":0.007614213197969543,"probability":0.009646849459530715,"rank":63},{"number":"41","value":41,"count100":1,"count30":0,"countAll":66,"gap":64,"lastSeen":"2026-05-06","lastSeenDisplay":"06-05-2026","recentRate":0.01,"historyRate":0.008816457387122629,"probability":0.009824808858423413,"rank":61},{"number":"42","value":42,"count100":2,"count30":1,"countAll":68,"gap":10,"lastSeen":"2026-06-29","lastSeenDisplay":"29-06-2026","recentRate":0.02,"historyRate":0.009083622762489982,"probability":0.011114355391510677,"rank":24},{"number":"43","value":43,"count100":2,"count30":0,"countAll":77,"gap":40,"lastSeen":"2026-05-30","lastSeenDisplay":"30-05-2026","recentRate":0.02,"historyRate":0.010285866951643068,"probability":0.011292314790403374,"rank":17},{"number":"44","value":44,"count100":1,"count30":0,"countAll":71,"gap":97,"lastSeen":"2026-04-03","lastSeenDisplay":"03-04-2026","recentRate":0.01,"historyRate":0.00948437082554101,"probability":0.009923675191141576,"rank":52},{"number":"45","value":45,"count100":0,"count30":0,"countAll":73,"gap":156,"lastSeen":"2026-01-30","lastSeenDisplay":"30-01-2026","recentRate":0.0,"historyRate":0.009751536200908363,"probability":0.008713221724228844,"rank":86},{"number":"46","value":46,"count100":0,"count30":0,"countAll":71,"gap":109,"lastSeen":"2026-03-22","lastSeenDisplay":"22-03-2026","recentRate":0.0,"historyRate":0.00948437082554101,"probability":0.008673675191141577,"rank":89},{"number":"47","value":47,"count100":1,"count30":0,"countAll":70,"gap":62,"lastSeen":"2026-05-08","lastSeenDisplay":"08-05-2026","recentRate":0.01,"historyRate":0.009350788137857334,"probability":0.009903901924597945,"rank":53},{"number":"48","value":48,"count100":1,"count30":0,"countAll":84,"gap":78,"lastSeen":"2026-04-22","lastSeenDisplay":"22-04-2026","recentRate":0.01,"historyRate":0.0112209457654288,"probability":0.010180727656208807,"rank":32},{"number":"49","value":49,"count100":0,"count30":0,"countAll":73,"gap":125,"lastSeen":"2026-03-06","lastSeenDisplay":"06-03-2026","recentRate":0.0,"historyRate":0.009751536200908363,"probability":0.008713221724228844,"rank":84},{"number":"50","value":50,"count100":2,"count30":0,"countAll":66,"gap":42,"lastSeen":"2026-05-28","lastSeenDisplay":"28-05-2026","recentRate":0.02,"historyRate":0.008816457387122629,"probability":0.01107480885842341,"rank":26},{"number":"51","value":51,"count100":3,"count30":1,"countAll":66,"gap":15,"lastSeen":"2026-06-24","lastSeenDisplay":"24-06-2026","recentRate":0.03,"historyRate":0.008816457387122629,"probability":0.012324808858423412,"rank":6},{"number":"52","value":52,"count100":1,"count30":1,"countAll":75,"gap":11,"lastSeen":"2026-06-28","lastSeenDisplay":"28-06-2026","recentRate":0.01,"historyRate":0.010018701576275714,"probability":0.01000276825731611,"rank":40},{"number":"53","value":53,"count100":2,"count30":1,"countAll":70,"gap":12,"lastSeen":"2026-06-27","lastSeenDisplay":"27-06-2026","recentRate":0.02,"historyRate":0.009350788137857334,"probability":0.011153901924597944,"rank":22},{"number":"54","value":54,"count100":4,"count30":1,"countAll":82,"gap":8,"lastSeen":"2026-07-01","lastSeenDisplay":"01-07-2026","recentRate":0.04,"historyRate":0.010953780390061448,"probability":0.01389118112312154,"rank":1},{"number":"55","value":55,"count100":3,"count30":1,"countAll":78,"gap":20,"lastSeen":"2026-06-19","lastSeenDisplay":"19-06-2026","recentRate":0.03,"historyRate":0.010419449639326743,"probability":0.012562088056947007,"rank":4},{"number":"56","value":56,"count100":0,"count30":0,"countAll":74,"gap":357,"lastSeen":"2025-07-13","lastSeenDisplay":"13-07-2025","recentRate":0.0,"historyRate":0.009885118888592039,"probability":0.008732994990772475,"rank":83},{"number":"57","value":57,"count100":0,"count30":0,"countAll":77,"gap":129,"lastSeen":"2026-03-02","lastSeenDisplay":"02-03-2026","recentRate":0.0,"historyRate":0.010285866951643068,"probability":0.008792314790403375,"rank":78},{"number":"58","value":58,"count100":0,"count30":0,"countAll":67,"gap":408,"lastSeen":"2025-05-23","lastSeenDisplay":"23-05-2025","recentRate":0.0,"historyRate":0.008950040074806305,"probability":0.008594582124967045,"rank":94},{"number":"59","value":59,"count100":1,"count30":0,"countAll":80,"gap":73,"lastSeen":"2026-04-27","lastSeenDisplay":"27-04-2026","recentRate":0.01,"historyRate":0.010686615014694095,"probability":0.010101634590034275,"rank":35},{"number":"60","value":60,"count100":1,"count30":1,"countAll":89,"gap":19,"lastSeen":"2026-06-20","lastSeenDisplay":"20-06-2026","recentRate":0.01,"historyRate":0.011888859203847182,"probability":0.010279593988926972,"rank":28},{"number":"61","value":61,"count100":1,"count30":0,"countAll":67,"gap":52,"lastSeen":"2026-05-18","lastSeenDisplay":"18-05-2026","recentRate":0.01,"historyRate":0.008950040074806305,"probability":0.009844582124967045,"rank":58},{"number":"62","value":62,"count100":0,"count30":0,"countAll":81,"gap":162,"lastSeen":"2026-01-24","lastSeenDisplay":"24-01-2026","recentRate":0.0,"historyRate":0.010820197702377772,"probability":0.008871407856577907,"rank":72},{"number":"63","value":63,"count100":1,"count30":0,"countAll":71,"gap":86,"lastSeen":"2026-04-14","lastSeenDisplay":"14-04-2026","recentRate":0.01,"historyRate":0.00948437082554101,"probability":0.009923675191141576,"rank":51},{"number":"64","value":64,"count100":1,"count30":0,"countAll":80,"gap":67,"lastSeen":"2026-05-03","lastSeenDisplay":"03-05-2026","recentRate":0.01,"historyRate":0.010686615014694095,"probability":0.010101634590034275,"rank":34},{"number":"65","value":65,"count100":2,"count30":1,"countAll":95,"gap":6,"lastSeen":"2026-07-03","lastSeenDisplay":"03-07-2026","recentRate":0.02,"historyRate":0.012690355329949238,"probability":0.01164823358818877,"rank":9},{"number":"66","value":66,"count100":1,"count30":0,"countAll":86,"gap":99,"lastSeen":"2026-04-01","lastSeenDisplay":"01-04-2026","recentRate":0.01,"historyRate":0.011488111140796153,"probability":0.010220274189296072,"rank":29},{"number":"67","value":67,"count100":1,"count30":0,"countAll":73,"gap":98,"lastSeen":"2026-04-02","lastSeenDisplay":"02-04-2026","recentRate":0.01,"historyRate":0.009751536200908363,"probability":0.009963221724228843,"rank":47},{"number":"68","value":68,"count100":2,"count30":1,"countAll":80,"gap":9,"lastSeen":"2026-06-30","lastSeenDisplay":"30-06-2026","recentRate":0.02,"historyRate":0.010686615014694095,"probability":0.011351634590034274,"rank":14},{"number":"69","value":69,"count100":2,"count30":0,"countAll":62,"gap":56,"lastSeen":"2026-05-14","lastSeenDisplay":"14-05-2026","recentRate":0.02,"historyRate":0.008282126636387924,"probability":0.010995715792248879,"rank":27},{"number":"70","value":70,"count100":0,"count30":0,"countAll":98,"gap":116,"lastSeen":"2026-03-15","lastSeenDisplay":"15-03-2026","recentRate":0.0,"historyRate":0.013091103393000268,"probability":0.009207553387819669,"rank":65},{"number":"71","value":71,"count100":1,"count30":1,"countAll":79,"gap":4,"lastSeen":"2026-07-05","lastSeenDisplay":"05-07-2026","recentRate":0.01,"historyRate":0.010553032327010419,"probability":0.010081861323490642,"rank":36},{"number":"72","value":72,"count100":0,"count30":0,"countAll":62,"gap":198,"lastSeen":"2025-12-19","lastSeenDisplay":"19-12-2025","recentRate":0.0,"historyRate":0.008282126636387924,"probability":0.00849571579224888,"rank":99},{"number":"73","value":73,"count100":0,"count30":0,"countAll":68,"gap":249,"lastSeen":"2025-10-29","lastSeenDisplay":"29-10-2025","recentRate":0.0,"historyRate":0.009083622762489982,"probability":0.008614355391510679,"rank":93},{"number":"74","value":74,"count100":0,"count30":0,"countAll":63,"gap":160,"lastSeen":"2026-01-26","lastSeenDisplay":"26-01-2026","recentRate":0.0,"historyRate":0.0084157093240716,"probability":0.008515489058792514,"rank":97},{"number":"75","value":75,"count100":1,"count30":0,"countAll":71,"gap":70,"lastSeen":"2026-04-30","lastSeenDisplay":"30-04-2026","recentRate":0.01,"historyRate":0.00948437082554101,"probability":0.009923675191141576,"rank":50},{"number":"76","value":76,"count100":2,"count30":0,"countAll":75,"gap":76,"lastSeen":"2026-04-24","lastSeenDisplay":"24-04-2026","recentRate":0.02,"historyRate":0.010018701576275714,"probability":0.01125276825731611,"rank":19},{"number":"77","value":77,"count100":0,"count30":0,"countAll":79,"gap":142,"lastSeen":"2026-02-13","lastSeenDisplay":"13-02-2026","recentRate":0.0,"historyRate":0.010553032327010419,"probability":0.00883186132349064,"rank":75},{"number":"78","value":78,"count100":1,"count30":0,"countAll":75,"gap":34,"lastSeen":"2026-06-05","lastSeenDisplay":"05-06-2026","recentRate":0.01,"historyRate":0.010018701576275714,"probability":0.01000276825731611,"rank":42},{"number":"79","value":79,"count100":1,"count30":1,"countAll":74,"gap":2,"lastSeen":"2026-07-07","lastSeenDisplay":"07-07-2026","recentRate":0.01,"historyRate":0.009885118888592039,"probability":0.009982994990772476,"rank":43},{"number":"80","value":80,"count100":1,"count30":1,"countAll":71,"gap":24,"lastSeen":"2026-06-15","lastSeenDisplay":"15-06-2026","recentRate":0.01,"historyRate":0.00948437082554101,"probability":0.009923675191141576,"rank":49},{"number":"81","value":81,"count100":1,"count30":0,"countAll":74,"gap":45,"lastSeen":"2026-05-25","lastSeenDisplay":"25-05-2026","recentRate":0.01,"historyRate":0.009885118888592039,"probability":0.009982994990772476,"rank":44},{"number":"82","value":82,"count100":1,"count30":0,"countAll":85,"gap":93,"lastSeen":"2026-04-07","lastSeenDisplay":"07-04-2026","recentRate":0.01,"historyRate":0.011354528453112477,"probability":0.01020050092275244,"rank":30},{"number":"83","value":83,"count100":3,"count30":2,"countAll":72,"gap":18,"lastSeen":"2026-06-21","lastSeenDisplay":"21-06-2026","recentRate":0.03,"historyRate":0.009617953513224685,"probability":0.012443448457685208,"rank":5},{"number":"84","value":84,"count100":2,"count30":1,"countAll":68,"gap":23,"lastSeen":"2026-06-16","lastSeenDisplay":"16-06-2026","recentRate":0.02,"historyRate":0.009083622762489982,"probability":0.011114355391510677,"rank":25},{"number":"85","value":85,"count100":2,"count30":1,"countAll":76,"gap":0,"lastSeen":"2026-07-09","lastSeenDisplay":"09-07-2026","recentRate":0.02,"historyRate":0.01015228426395939,"probability":0.01127254152385974,"rank":18},{"number":"86","value":86,"count100":0,"count30":0,"countAll":74,"gap":165,"lastSeen":"2026-01-21","lastSeenDisplay":"21-01-2026","recentRate":0.0,"historyRate":0.009885118888592039,"probability":0.008732994990772475,"rank":82},{"number":"87","value":87,"count100":1,"count30":1,"countAll":67,"gap":5,"lastSeen":"2026-07-04","lastSeenDisplay":"04-07-2026","recentRate":0.01,"historyRate":0.008950040074806305,"probability":0.009844582124967045,"rank":56},{"number":"88","value":88,"count100":0,"count30":0,"countAll":78,"gap":102,"lastSeen":"2026-03-29","lastSeenDisplay":"29-03-2026","recentRate":0.0,"historyRate":0.010419449639326743,"probability":0.008812088056947009,"rank":76},{"number":"89","value":89,"count100":2,"count30":2,"countAll":77,"gap":1,"lastSeen":"2026-07-08","lastSeenDisplay":"08-07-2026","recentRate":0.02,"historyRate":0.010285866951643068,"probability":0.011292314790403374,"rank":16},{"number":"90","value":90,"count100":0,"count30":0,"countAll":69,"gap":145,"lastSeen":"2026-02-10","lastSeenDisplay":"10-02-2026","recentRate":0.0,"historyRate":0.009217205450173658,"probability":0.00863412865805431,"rank":91},{"number":"91","value":91,"count100":0,"count30":0,"countAll":86,"gap":100,"lastSeen":"2026-03-31","lastSeenDisplay":"31-03-2026","recentRate":0.0,"historyRate":0.011488111140796153,"probability":0.008970274189296072,"rank":68},{"number":"92","value":92,"count100":1,"count30":0,"countAll":74,"gap":61,"lastSeen":"2026-05-09","lastSeenDisplay":"09-05-2026","recentRate":0.01,"historyRate":0.009885118888592039,"probability":0.009982994990772476,"rank":45},{"number":"93","value":93,"count100":1,"count30":0,"countAll":72,"gap":32,"lastSeen":"2026-06-07","lastSeenDisplay":"07-06-2026","recentRate":0.01,"historyRate":0.009617953513224685,"probability":0.00994344845768521,"rank":48},{"number":"94","value":94,"count100":1,"count30":0,"countAll":76,"gap":55,"lastSeen":"2026-05-15","lastSeenDisplay":"15-05-2026","recentRate":0.01,"historyRate":0.01015228426395939,"probability":0.010022541523859743,"rank":39},{"number":"95","value":95,"count100":0,"count30":0,"countAll":66,"gap":112,"lastSeen":"2026-03-19","lastSeenDisplay":"19-03-2026","recentRate":0.0,"historyRate":0.008816457387122629,"probability":0.008574808858423412,"rank":95},{"number":"96","value":96,"count100":0,"count30":0,"countAll":81,"gap":195,"lastSeen":"2025-12-22","lastSeenDisplay":"22-12-2025","recentRate":0.0,"historyRate":0.010820197702377772,"probability":0.008871407856577907,"rank":73},{"number":"97","value":97,"count100":2,"count30":1,"countAll":82,"gap":3,"lastSeen":"2026-07-06","lastSeenDisplay":"06-07-2026","recentRate":0.02,"historyRate":0.010953780390061448,"probability":0.01139118112312154,"rank":12},{"number":"98","value":98,"count100":0,"count30":0,"countAll":77,"gap":503,"lastSeen":"2025-02-17","lastSeenDisplay":"17-02-2025","recentRate":0.0,"historyRate":0.010285866951643068,"probability":0.008792314790403375,"rank":80},{"number":"99","value":99,"count100":0,"count30":0,"countAll":72,"gap":192,"lastSeen":"2025-12-25","lastSeenDisplay":"25-12-2025","recentRate":0.0,"historyRate":0.009617953513224685,"probability":0.00869344845768521,"rank":88}],"top10":[{"number":"54","value":54,"count100":4,"count30":1,"countAll":82,"gap":8,"lastSeen":"2026-07-01","lastSeenDisplay":"01-07-2026","recentRate":0.04,"historyRate":0.010953780390061448,"probability":0.01389118112312154,"rank":1},{"number":"04","value":4,"count100":4,"count30":1,"countAll":75,"gap":13,"lastSeen":"2026-06-26","lastSeenDisplay":"26-06-2026","recentRate":0.04,"historyRate":0.010018701576275714,"probability":0.01375276825731611,"rank":2},{"number":"39","value":39,"count100":3,"count30":1,"countAll":92,"gap":7,"lastSeen":"2026-07-02","lastSeenDisplay":"02-07-2026","recentRate":0.03,"historyRate":0.01228960726689821,"probability":0.012838913788557869,"rank":3},{"number":"55","value":55,"count100":3,"count30":1,"countAll":78,"gap":20,"lastSeen":"2026-06-19","lastSeenDisplay":"19-06-2026","recentRate":0.03,"historyRate":0.010419449639326743,"probability":0.012562088056947007,"rank":4},{"number":"83","value":83,"count100":3,"count30":2,"countAll":72,"gap":18,"lastSeen":"2026-06-21","lastSeenDisplay":"21-06-2026","recentRate":0.03,"historyRate":0.009617953513224685,"probability":0.012443448457685208,"rank":5},{"number":"51","value":51,"count100":3,"count30":1,"countAll":66,"gap":15,"lastSeen":"2026-06-24","lastSeenDisplay":"24-06-2026","recentRate":0.03,"historyRate":0.008816457387122629,"probability":0.012324808858423412,"rank":6},{"number":"37","value":37,"count100":3,"count30":1,"countAll":64,"gap":16,"lastSeen":"2026-06-23","lastSeenDisplay":"23-06-2026","recentRate":0.03,"historyRate":0.008549292011755277,"probability":0.012285262325336145,"rank":7},{"number":"36","value":36,"count100":2,"count30":1,"countAll":104,"gap":17,"lastSeen":"2026-06-22","lastSeenDisplay":"22-06-2026","recentRate":0.02,"historyRate":0.013892599519102324,"probability":0.011826192987081466,"rank":8},{"number":"65","value":65,"count100":2,"count30":1,"countAll":95,"gap":6,"lastSeen":"2026-07-03","lastSeenDisplay":"03-07-2026","recentRate":0.02,"historyRate":0.012690355329949238,"probability":0.01164823358818877,"rank":9},{"number":"32","value":32,"count100":2,"count30":1,"countAll":88,"gap":21,"lastSeen":"2026-06-18","lastSeenDisplay":"18-06-2026","recentRate":0.02,"historyRate":0.011755276516163505,"probability":0.011509820722383338,"rank":10}]};
+    const RAW_CSV_URL = 'https://raw.githubusercontent.com/khiemdoan/vietnam-lottery-xsmb-analysis/refs/heads/main/data/xsmb.csv';
+    const WINDOW_DAYS = 100;
+    const SHORT_WINDOW_DAYS = 30;
+
+    let APP_DATA = EMBEDDED_APP_DATA;
+    let statsByNumber = new Map();
+    let top10Set = new Set();
+
+    const state = {
+      metric: 'count100',
+      sortField: 'rank',
+      sortDir: 'asc',
+      selected: APP_DATA.top10[0].number,
+    };
+
+    function reindexData() {
+      statsByNumber = new Map(APP_DATA.numberStats.map((item) => [item.number, item]));
+      top10Set = new Set(APP_DATA.top10.map((item) => item.number));
+      if (!statsByNumber.has(state.selected)) {
+        state.selected = APP_DATA.top10[0].number;
+      }
+    }
+
+    function pct(value, digits = 2) {
+      return `${(value * 100).toFixed(digits)}%`;
+    }
+
+    function numberList(values, limit = 8) {
+      if (values.length <= limit) return values.join(', ');
+      return `${values.slice(0, limit).join(', ')} +${values.length - limit}`;
+    }
+
+    function setText(id, value) {
+      document.getElementById(id).textContent = value;
+    }
+
+    function setStatus(message) {
+      const status = document.getElementById('dataStatus');
+      if (status) status.textContent = message;
+    }
+
+    function pad2(value) {
+      return String(value).padStart(2, '0');
+    }
+
+    function parseIsoDate(value) {
+      const [year, month, day] = value.split('-').map(Number);
+      return new Date(year, month - 1, day);
+    }
+
+    function dateToIso(date) {
+      return `${date.getFullYear()}-${pad2(date.getMonth() + 1)}-${pad2(date.getDate())}`;
+    }
+
+    function addDays(value, days) {
+      const date = parseIsoDate(value);
+      date.setDate(date.getDate() + days);
+      return dateToIso(date);
+    }
+
+    function formatDisplayDate(value) {
+      if (!value) return '-';
+      const [year, month, day] = value.split('-');
+      return `${day}-${month}-${year}`;
+    }
+
+    function csvToRows(text) {
+      const lines = text.trim().split(/\r?\n/).filter(Boolean);
+      const headers = lines.shift().split(',');
+      const dateIndex = headers.indexOf('date');
+      const specialIndex = headers.indexOf('special');
+      if (dateIndex < 0 || specialIndex < 0) {
+        throw new Error('CSV không có cột date/special');
+      }
+
+      return lines.map((line) => {
+        const columns = line.split(',');
+        const special = Number(columns[specialIndex]);
+        const tail = special % 100;
+        const date = columns[dateIndex];
+        return {
+          date,
+          dateDisplay: formatDisplayDate(date),
+          special,
+          specialDisplay: String(special).padStart(5, '0'),
+          tail,
+          tailDisplay: pad2(tail),
+        };
+      }).sort((a, b) => a.date.localeCompare(b.date));
+    }
+
+    function buildPayloadFromRows(rows, sourceMode) {
+      const latest = rows[rows.length - 1];
+      const recentRows = rows.slice(-WINDOW_DAYS);
+      const shortRows = rows.slice(-SHORT_WINDOW_DAYS);
+      const countAll = Array(100).fill(0);
+      const countRecent = Array(100).fill(0);
+      const countShort = Array(100).fill(0);
+
+      rows.forEach((row) => countAll[row.tail] += 1);
+      recentRows.forEach((row) => countRecent[row.tail] += 1);
+      shortRows.forEach((row) => countShort[row.tail] += 1);
+
+      const stats = [];
+      for (let number = 0; number < 100; number += 1) {
+        let gap = null;
+        let lastSeen = null;
+        for (let index = rows.length - 1; index >= 0; index -= 1) {
+          if (rows[index].tail === number) {
+            gap = rows.length - 1 - index;
+            lastSeen = rows[index].date;
+            break;
+          }
+        }
+
+        const pUniform = 0.01;
+        const pRecent = (countRecent[number] + 1) / (WINDOW_DAYS + 100);
+        const pLong = (countAll[number] + 1) / (rows.length + 100);
+        const probability = 0.60 * pUniform + 0.25 * pRecent + 0.15 * pLong;
+
+        stats.push({
+          number: pad2(number),
+          value: number,
+          count100: countRecent[number],
+          count30: countShort[number],
+          countAll: countAll[number],
+          gap,
+          lastSeen,
+          lastSeenDisplay: formatDisplayDate(lastSeen),
+          recentRate: countRecent[number] / WINDOW_DAYS,
+          historyRate: countAll[number] / rows.length,
+          probability,
+        });
+      }
+
+      const totalProbability = stats.reduce((sum, item) => sum + item.probability, 0);
+      stats.forEach((item) => {
+        item.probability = item.probability / totalProbability;
+      });
+
+      const ranked = [...stats].sort((a, b) => {
+        return (
+          b.probability - a.probability ||
+          b.count100 - a.count100 ||
+          b.count30 - a.count30 ||
+          b.countAll - a.countAll ||
+          (a.gap ?? 999999) - (b.gap ?? 999999)
+        );
+      });
+      ranked.forEach((item, index) => {
+        item.rank = index + 1;
+      });
+
+      const byNumber = new Map(ranked.map((item) => [item.number, item]));
+      const orderedStats = Array.from({ length: 100 }, (_, number) => byNumber.get(pad2(number)));
+      const mostCommonCount = Math.max(...orderedStats.map((item) => item.count100));
+      const mostCommonNumbers = orderedStats.filter((item) => item.count100 === mostCommonCount).map((item) => item.number);
+      const missingNumbers = orderedStats.filter((item) => item.count100 === 0).map((item) => item.number);
+      const targetDate = addDays(latest.date, 1);
+
+      return {
+        metadata: {
+          sourceFile: sourceMode === 'online' ? RAW_CSV_URL : EMBEDDED_APP_DATA.metadata.sourceFile,
+          sourceUrl: RAW_CSV_URL,
+          sourceMode,
+          historyRows: rows.length,
+          windowDays: WINDOW_DAYS,
+          shortWindowDays: SHORT_WINDOW_DAYS,
+          startDate: recentRows[0].date,
+          endDate: latest.date,
+          startDateDisplay: recentRows[0].dateDisplay,
+          endDateDisplay: latest.dateDisplay,
+          targetDate,
+          targetDateDisplay: formatDisplayDate(targetDate),
+          uniqueCount: new Set(recentRows.map((row) => row.tail)).size,
+          missingCount: missingNumbers.length,
+          missingNumbers,
+          mostCommonCount,
+          mostCommonNumbers,
+          latestTail: latest.tailDisplay,
+          latestSpecial: latest.specialDisplay,
+        },
+        last100: recentRows,
+        numberStats: orderedStats,
+        top10: ranked.slice(0, 10),
+      };
+    }
+
+    function renderHeader() {
+      const meta = APP_DATA.metadata;
+      setText('subtitle', `Nguồn dữ liệu: ${meta.startDateDisplay} đến ${meta.endDateDisplay}. Kết quả mới nhất: ${meta.latestSpecial}, đuôi ${meta.latestTail}.`);
+      setText('targetDate', meta.targetDateDisplay);
+      const sourceLabel = meta.sourceMode === 'online'
+        ? 'GitHub raw CSV mới nhất'
+        : meta.sourceMode === 'online-build'
+          ? 'GitHub raw CSV tại thời điểm build'
+          : 'dữ liệu nhúng dự phòng';
+      setText('footer', `Dữ liệu đọc từ ${sourceLabel}. Tổng lịch sử: ${meta.historyRows.toLocaleString('vi-VN')} kỳ. Nguồn: ${meta.sourceUrl || meta.sourceFile}.`);
+    }
+
+    function renderKPIs() {
+      const meta = APP_DATA.metadata;
+      const kpis = [
+        ['Số kỳ phân tích', meta.windowDays, `${meta.startDateDisplay} - ${meta.endDateDisplay}`],
+        ['Số khác nhau', `${meta.uniqueCount}/100`, `${meta.missingCount} số chưa xuất hiện`],
+        ['Xuất hiện nhiều nhất', numberList(meta.mostCommonNumbers), `${meta.mostCommonCount} lần trong 100 ngày`],
+        ['Đuôi mới nhất', meta.latestTail, `Giải đặc biệt ${meta.latestSpecial}`],
+        ['Mốc lý thuyết', '1.00%', 'Cho mỗi số 00-99'],
+      ];
+      document.getElementById('kpis').innerHTML = kpis.map(([label, value, note]) => `
+        <article class="kpi">
+          <div class="kpi-label">${label}</div>
+          <div class="kpi-value">${value}</div>
+          <div class="kpi-note">${note}</div>
+        </article>
+      `).join('');
+    }
+
+    function renderCandidates() {
+      document.getElementById('candidateGrid').innerHTML = APP_DATA.top10.map((item, index) => `
+        <article class="candidate" data-number="${item.number}">
+          <div class="rank">#${index + 1}</div>
+          <div class="candidate-number">${item.number}</div>
+          <div class="probability">${pct(item.probability)}</div>
+          <div class="candidate-meta">${item.count100} lần / 100 ngày<br>${item.count30} lần / 30 ngày<br>Cách ${item.gap} kỳ</div>
+        </article>
+      `).join('');
+      document.querySelectorAll('.candidate').forEach((item) => {
+        item.addEventListener('click', () => {
+          state.selected = item.dataset.number;
+          renderAll();
+        });
+      });
+    }
+
+    function metricValue(item) {
+      if (state.metric === 'probability') return item.probability;
+      if (state.metric === 'gap') return item.gap;
+      return item.count100;
+    }
+
+    function metricLabel(item) {
+      if (state.metric === 'probability') return pct(item.probability);
+      if (state.metric === 'gap') return `${item.gap} kỳ`;
+      return `${item.count100} lần`;
+    }
+
+    function heatColor(item, maxValue) {
+      const value = metricValue(item);
+      const ratio = maxValue ? value / maxValue : 0;
+      const alpha = 0.08 + Math.min(0.72, ratio * 0.72);
+      if (state.metric === 'probability') return `rgba(47, 125, 88, ${alpha})`;
+      if (state.metric === 'gap') return `rgba(181, 116, 24, ${alpha})`;
+      return `rgba(47, 93, 153, ${alpha})`;
+    }
+
+    function renderHeatmap() {
+      const maxValue = Math.max(...APP_DATA.numberStats.map(metricValue));
+      const html = APP_DATA.numberStats.map((item) => {
+        const classes = [
+          'heat-cell',
+          item.number === state.selected ? 'selected' : '',
+          top10Set.has(item.number) ? 'top10' : '',
+        ].filter(Boolean).join(' ');
+        return `
+          <button class="${classes}" data-number="${item.number}" style="background:${heatColor(item, maxValue)}">
+            <strong>${item.number}</strong>
+            <span>${metricLabel(item)}</span>
+          </button>
+        `;
+      }).join('');
+      document.getElementById('heatmap').innerHTML = html;
+      document.querySelectorAll('.heat-cell').forEach((cell) => {
+        cell.addEventListener('click', () => {
+          state.selected = cell.dataset.number;
+          renderAll();
+        });
+      });
+    }
+
+    function renderSelectedDetail() {
+      const item = statsByNumber.get(state.selected);
+      document.getElementById('selectedDetail').innerHTML = `
+        <div class="detail-number">
+          <strong>${item.number}</strong>
+          <span class="rank-pill">Hạng #${item.rank}</span>
+        </div>
+        <div class="detail-cell"><span>Xác suất mô hình</span><b>${pct(item.probability)}</b></div>
+        <div class="detail-cell"><span>100 ngày</span><b>${item.count100} lần (${pct(item.recentRate)})</b></div>
+        <div class="detail-cell"><span>Lần gần nhất</span><b>${item.lastSeenDisplay}</b></div>
+      `;
+    }
+
+    function renderFrequencyBars() {
+      const rows = [...APP_DATA.numberStats]
+        .sort((a, b) => b.count100 - a.count100 || b.probability - a.probability)
+        .slice(0, 20);
+      const maxCount = Math.max(...rows.map((item) => item.count100));
+      document.getElementById('frequencyBars').innerHTML = rows.map((item, index) => {
+        const width = maxCount ? (item.count100 / maxCount) * 100 : 0;
+        const color = index % 5 === 0 ? 'var(--teal)' : index % 5 === 1 ? 'var(--blue)' : index % 5 === 2 ? 'var(--gold)' : index % 5 === 3 ? 'var(--green)' : 'var(--red)';
+        return `
+          <div class="bar-row">
+            <div class="bar-label">${item.number}</div>
+            <div class="bar-track"><div class="bar-fill" style="width:${width}%; background:${color};"></div></div>
+            <div class="bar-value">${item.count100} lần</div>
+          </div>
+        `;
+      }).join('');
+    }
+
+    function renderTimeline() {
+      document.getElementById('timeline').innerHTML = APP_DATA.last100.map((row) => {
+        const classes = [
+          'draw-dot',
+          row.tailDisplay === state.selected ? 'selected' : '',
+          top10Set.has(row.tailDisplay) ? 'top10' : '',
+        ].filter(Boolean).join(' ');
+        return `
+          <button class="${classes}" data-number="${row.tailDisplay}" title="${row.dateDisplay} - ${row.specialDisplay}">
+            <b>${row.tailDisplay}</b>
+            <span>${row.dateDisplay.slice(0, 5)}</span>
+          </button>
+        `;
+      }).join('');
+      document.querySelectorAll('.draw-dot').forEach((dot) => {
+        dot.addEventListener('click', () => {
+          state.selected = dot.dataset.number;
+          renderAll();
+        });
+      });
+    }
+
+    function compareValues(a, b, field) {
+      const av = a[field];
+      const bv = b[field];
+      if (typeof av === 'number' && typeof bv === 'number') return av - bv;
+      return String(av).localeCompare(String(bv), 'vi');
+    }
+
+    function renderNumbersTable() {
+      const query = document.getElementById('numberSearch').value.trim();
+      const rows = APP_DATA.numberStats
+        .filter((item) => !query || item.number.includes(query.padStart(Math.min(query.length, 2), '0')) || item.number.includes(query))
+        .sort((a, b) => {
+          const result = compareValues(a, b, state.sortField);
+          return state.sortDir === 'asc' ? result : -result;
+        });
+      document.getElementById('numbersTable').innerHTML = rows.map((item) => `
+        <tr>
+          <td><span class="rank-pill">#${item.rank}</span></td>
+          <td><span class="num-pill">${item.number}</span></td>
+          <td>${pct(item.probability)}</td>
+          <td>${item.count100}</td>
+          <td>${pct(item.recentRate)}</td>
+          <td>${item.count30}</td>
+          <td>${item.gap} kỳ</td>
+          <td>${item.countAll}</td>
+          <td>${item.lastSeenDisplay}</td>
+        </tr>
+      `).join('');
+    }
+
+    function renderDrawTable() {
+      document.getElementById('drawTable').innerHTML = [...APP_DATA.last100].reverse().map((row) => {
+        const item = statsByNumber.get(row.tailDisplay);
+        return `
+          <tr>
+            <td>${row.dateDisplay}</td>
+            <td>${row.specialDisplay}</td>
+            <td><span class="num-pill">${row.tailDisplay}</span></td>
+            <td>${item.count100} lần</td>
+            <td>${pct(item.probability)}</td>
+          </tr>
+        `;
+      }).join('');
+    }
+
+    function renderAll() {
+      renderHeatmap();
+      renderSelectedDetail();
+      renderTimeline();
+      renderNumbersTable();
+    }
+
+    function renderDashboard() {
+      reindexData();
+      renderHeader();
+      renderKPIs();
+      renderCandidates();
+      renderFrequencyBars();
+      renderDrawTable();
+      renderAll();
+    }
+
+    async function loadLatestData() {
+      const refreshButton = document.getElementById('refreshButton');
+      try {
+        if (refreshButton) refreshButton.disabled = true;
+        setStatus('Đang tải dữ liệu mới nhất...');
+        const response = await fetch(`${RAW_CSV_URL}?v=${Date.now()}`, { cache: 'no-store' });
+        if (!response.ok) {
+          throw new Error(`GitHub trả về HTTP ${response.status}`);
+        }
+        const csvText = await response.text();
+        const rows = csvToRows(csvText);
+        if (rows.length < WINDOW_DAYS) {
+          throw new Error('CSV không đủ dữ liệu để thống kê 100 ngày');
+        }
+        APP_DATA = buildPayloadFromRows(rows, 'online');
+        state.selected = APP_DATA.top10[0].number;
+        renderDashboard();
+        setStatus(`Đã cập nhật từ GitHub: ${APP_DATA.metadata.endDateDisplay}`);
+      } catch (error) {
+        APP_DATA = EMBEDDED_APP_DATA;
+        state.selected = APP_DATA.top10[0].number;
+        renderDashboard();
+        setStatus(`Không tải được GitHub, đang dùng dữ liệu dự phòng: ${error.message}`);
+      } finally {
+        if (refreshButton) refreshButton.disabled = false;
+      }
+    }
+
+    document.querySelectorAll('[data-metric]').forEach((button) => {
+      button.addEventListener('click', () => {
+        document.querySelectorAll('[data-metric]').forEach((item) => item.classList.remove('active'));
+        button.classList.add('active');
+        state.metric = button.dataset.metric;
+        renderAll();
+      });
+    });
+
+    document.querySelectorAll('th[data-sort]').forEach((header) => {
+      header.addEventListener('click', () => {
+        const field = header.dataset.sort;
+        if (state.sortField === field) {
+          state.sortDir = state.sortDir === 'asc' ? 'desc' : 'asc';
+        } else {
+          state.sortField = field;
+          state.sortDir = field === 'rank' || field === 'number' ? 'asc' : 'desc';
+        }
+        renderNumbersTable();
+      });
+    });
+
+    document.getElementById('numberSearch').addEventListener('input', renderNumbersTable);
+    document.getElementById('refreshButton').addEventListener('click', loadLatestData);
+
+    renderDashboard();
+    loadLatestData();
+    window.setInterval(loadLatestData, 30 * 60 * 1000);
+  </script>
+</body>
+</html>
