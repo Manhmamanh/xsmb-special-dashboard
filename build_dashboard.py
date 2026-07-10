@@ -28,6 +28,13 @@ def parse_rows(raw: str) -> list[dict]:
     for item in csv.DictReader(io.StringIO(raw)):
         special = int(item['special'])
         date_obj = datetime.strptime(item['date'], '%Y-%m-%d')
+        all_tails = []
+        for k, v in item.items():
+            if k != 'date' and v:
+                try:
+                    all_tails.append(int(v) % 100)
+                except ValueError:
+                    pass
         rows.append(
             {
                 'date': item['date'],
@@ -37,6 +44,7 @@ def parse_rows(raw: str) -> list[dict]:
                 'tail': special % 100,
                 'tailDisplay': f'{special % 100:02d}',
                 'weekday': date_obj.weekday(),
+                'allTails': all_tails,
             }
         )
     return sorted(rows, key=lambda row: row['date'])
@@ -58,6 +66,14 @@ def build_payload(rows: list[dict], source_mode: str, source_file: str) -> dict:
     latest_date = datetime.strptime(latest['date'], '%Y-%m-%d')
     target_date = latest_date + timedelta(days=1)
     recent_rows = rows[-WINDOW_DAYS:]
+
+    loto_counts = [0] * 100
+    for r in recent_rows:
+        for t in r.get('allTails', []):
+            loto_counts[t] += 1
+    loto_stats = [{'number': f'{i:02d}', 'count': loto_counts[i]} for i in range(100)]
+    loto_stats.sort(key=lambda x: (-x['count'], x['number']))
+    loto_top5 = loto_stats[:5]
     short_rows = rows[-SHORT_WINDOW_DAYS:]
 
     all_tails = [row['tail'] for row in rows]
@@ -1083,6 +1099,12 @@ HTML_TEMPLATE = r"""<!DOCTYPE html>
         const special = Number(columns[specialIndex]);
         const tail = special % 100;
         const date = columns[dateIndex];
+        const allTails = [];
+        for (let i = 0; i < columns.length; i++) {
+           if (i !== dateIndex && columns[i]) {
+               allTails.push(Number(columns[i]) % 100);
+           }
+        }
         return {
           date,
           dateDisplay: formatDisplayDate(date),
@@ -1090,6 +1112,7 @@ HTML_TEMPLATE = r"""<!DOCTYPE html>
           specialDisplay: String(special).padStart(5, '0'),
           tail,
           tailDisplay: pad2(tail),
+          allTails,
         };
       }).sort((a, b) => a.date.localeCompare(b.date));
     }
@@ -1186,6 +1209,19 @@ HTML_TEMPLATE = r"""<!DOCTYPE html>
       const mostCommonNumbers = orderedStats.filter((item) => item.count100 === mostCommonCount).map((item) => item.number);
       const missingNumbers = orderedStats.filter((item) => item.count100 === 0).map((item) => item.number);
       const targetDate = addDays(latest.date, 1);
+      
+      const lotoCounts = Array(100).fill(0);
+      recentRows.forEach(r => {
+          if (r.allTails) {
+              r.allTails.forEach(t => lotoCounts[t] += 1);
+          }
+      });
+      const lotoStats = [];
+      for(let i=0; i<100; i++) {
+          lotoStats.push({number: pad2(i), count: lotoCounts[i]});
+      }
+      lotoStats.sort((a, b) => b.count - a.count || a.number.localeCompare(b.number));
+      const lotoTop5 = lotoStats.slice(0, 5);
 
       return {
         metadata: {
@@ -1213,6 +1249,7 @@ HTML_TEMPLATE = r"""<!DOCTYPE html>
         last100: recentRows,
         numberStats: orderedStats,
         top10: ranked.slice(0, 10),
+        lotoTop5,
       };
     }
 
@@ -1467,12 +1504,23 @@ HTML_TEMPLATE = r"""<!DOCTYPE html>
       renderNumbersTable();
     }
 
+    function renderLotoTop5() {
+      if (!APP_DATA.lotoTop5) return;
+      document.getElementById('lotoTop5Grid').innerHTML = APP_DATA.lotoTop5.map(item => `
+        <div class="loto-card">
+          <div class="loto-number">${item.number}</div>
+          <div class="loto-count">${item.count} lần nổ</div>
+        </div>
+      `).join('');
+    }
+
     function renderDashboard() {
       reindexData();
       renderHeader();
       renderBacktest();
       renderKPIs();
       renderCandidates();
+      renderLotoTop5();
       renderFrequencyBars();
       renderDrawTable();
       renderAll();
