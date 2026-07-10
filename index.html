@@ -851,20 +851,41 @@
 
       const stats = [];
       for (let number = 0; number < 100; number += 1) {
+        const gapHistory = [];
+        const weekdayCounts = Array(7).fill(0);
         let gap = null;
         let lastSeen = null;
+        let currentGap = 0;
+
         for (let index = rows.length - 1; index >= 0; index -= 1) {
           if (rows[index].tail === number) {
-            gap = rows.length - 1 - index;
-            lastSeen = rows[index].date;
-            break;
+            if (gap === null) {
+              gap = currentGap;
+              lastSeen = rows[index].date;
+            } else {
+              if (gapHistory.length < 10) {
+                gapHistory.push(currentGap);
+              }
+            }
+            currentGap = 0;
+            const dateObj = parseIsoDate(rows[index].date);
+            const wd = (dateObj.getDay() + 6) % 7; // Mon=0, Sun=6
+            weekdayCounts[wd] += 1;
+          } else {
+            currentGap += 1;
           }
         }
 
+        const expectedGap = countAll[number] > 0 ? rows.length / countAll[number] : 100;
+        const gapFactor = gap !== null ? Math.min(gap, 30) / 30.0 : 0.0;
+
         const pUniform = 0.01;
+        const pShort = (countShort[number] + 1) / (SHORT_WINDOW_DAYS + 100);
         const pRecent = (countRecent[number] + 1) / (WINDOW_DAYS + 100);
         const pLong = (countAll[number] + 1) / (rows.length + 100);
-        const probability = 0.60 * pUniform + 0.25 * pRecent + 0.15 * pLong;
+        const pGap = pUniform * (1 + 0.5 * gapFactor);
+
+        const probability = 0.30 * pUniform + 0.30 * pShort + 0.20 * pRecent + 0.10 * pLong + 0.10 * pGap;
 
         stats.push({
           number: pad2(number),
@@ -873,6 +894,9 @@
           count30: countShort[number],
           countAll: countAll[number],
           gap,
+          gapHistory,
+          weekdayCounts,
+          expectedGap,
           lastSeen,
           lastSeenDisplay: formatDisplayDate(lastSeen),
           recentRate: countRecent[number] / WINDOW_DAYS,
@@ -925,9 +949,10 @@
           missingNumbers,
           mostCommonCount,
           mostCommonNumbers,
-          latestTail: latest.tailDisplay,
-          latestSpecial: latest.specialDisplay,
+          latestTail: pad2(latest.tail),
+          latestSpecial: pad2(latest.special),
         },
+        backtest: EMBEDDED_APP_DATA.backtest,
         last100: recentRows,
         numberStats: orderedStats,
         top10: ranked.slice(0, 10),
@@ -1246,7 +1271,14 @@
       });
     });
 
-    document.getElementById('numberSearch').addEventListener('input', renderNumbersTable);
+    document.getElementById('numberSearch').addEventListener('input', (e) => {
+      const val = e.target.value.trim();
+      if (val.length === 2 && !isNaN(val) && statsByNumber.has(val)) {
+        state.selected = val;
+        renderAll();
+      }
+      renderNumbersTable();
+    });
     document.getElementById('refreshButton').addEventListener('click', loadLatestData);
 
     renderDashboard();
