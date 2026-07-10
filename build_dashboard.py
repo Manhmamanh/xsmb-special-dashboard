@@ -415,6 +415,22 @@ HTML_TEMPLATE = r"""<!DOCTYPE html>
       min-height: 132px;
       padding: 13px;
       position: relative;
+      transition: transform 0.2s;
+    }
+
+    .candidate.top5 {
+      background: #f0fdfa;
+      border: 2px solid var(--teal);
+      transform: scale(1.03);
+      box-shadow: 0 4px 12px rgba(8, 127, 140, 0.15);
+      z-index: 2;
+    }
+    .candidate.top5 .rank {
+      color: var(--teal);
+      font-weight: 700;
+    }
+    .candidate.top5 .candidate-number {
+      color: var(--teal);
     }
 
     .candidate::before {
@@ -707,17 +723,19 @@ HTML_TEMPLATE = r"""<!DOCTYPE html>
       font-size: 13px;
       min-width: 920px;
       width: 100%;
+      border: 1px solid var(--line);
     }
 
     th,
     td {
-      border-bottom: 1px solid #edf0f3;
+      border: 1px solid var(--line);
       padding: 9px 10px;
       text-align: left;
       white-space: nowrap;
     }
 
     th {
+      background: var(--surface-soft);
       color: var(--muted);
       cursor: pointer;
       font-size: 12px;
@@ -1199,7 +1217,7 @@ HTML_TEMPLATE = r"""<!DOCTYPE html>
 
     function renderCandidates() {
       document.getElementById('candidateGrid').innerHTML = APP_DATA.top10.map((item, index) => `
-        <article class="candidate" data-number="${item.number}">
+        <article class="candidate ${index < 5 ? 'top5' : ''}" data-number="${item.number}">
           <div class="rank">#${index + 1}</div>
           <div class="candidate-number">${item.number}</div>
           <div class="probability">${pct(item.probability)}</div>
